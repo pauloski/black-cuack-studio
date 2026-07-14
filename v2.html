@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BlackQuack Studio | Ideas que hacen ruido</title>
+    <style>
+        :root {
+            /* MODO CLARO (Default) */
+            --bg: #E6E6E6;
+            --container-bg: #ffffff;
+            --text: #444444;
+            --accent: #F39200;
+            --yellow: #DEC520;
+            --border: #444444;
+            --shadow: 8px 8px 0px #444444;
+        }
+
+        [data-theme="dark"] {
+            /* MODO OSCURO (Underground) */
+            --bg: #1a1a1a;
+            --container-bg: #2d2d2d;
+            --text: #E6E6E6;
+            --accent: #F39200;
+            --yellow: #b09a1a;
+            --border: #ffffff;
+            --shadow: 8px 8px 0px #F39200;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            transition: background-color 0.3s, color 0.3s, border-color 0.3s;
+        }
+
+        body {
+            font-family: 'Courier New', Courier, monospace; /* Toque más maker/indie */
+            background-color: var(--bg);
+            color: var(--text);
+            overflow-x: hidden;
+        }
+
+        /* --- NAVEGACIÓN Y SWITCH --- */
+        nav {
+            padding: 20px 5%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 4px solid var(--border);
+            background: var(--container-bg);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .theme-switch {
+            cursor: pointer;
+            padding: 10px;
+            border: 2px solid var(--border);
+            background: var(--yellow);
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        /* --- HERO CON IMÁGENES 1X1 --- */
+        .hero {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            min-height: 80vh;
+            border-bottom: 4px solid var(--border);
+        }
+
+        .hero-content {
+            padding: 60px 10%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            border-right: 4px solid var(--border);
+        }
+
+        .hero-content h1 {
+            font-size: clamp(3rem, 8vw, 5rem);
+            line-height: 0.8;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+        }
+
+        .hero-content span {
+            background: var(--accent);
+            color: white;
+            padding: 0 10px;
+            display: inline-block;
+            transform: rotate(-2deg);
+        }
+
+        /* GRID DE IMÁGENES 1X1 */
+        .hero-gallery {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr 1fr;
+            background: var(--border);
+            gap: 4px;
+        }
+
+        .img-box {
+            background: #ccc;
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            overflow: hidden;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .img-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            filter: grayscale(1);
+            transition: 0.5s;
+        }
+
+        .img-box:hover img {
+            filter: grayscale(0);
+            transform: scale(1.1);
+        }
+
+        .img-box::after {
+            content: "FRAME_" attr(data-id);
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background: var(--accent);
+            color: white;
+            padding: 2px 5px;
+            font-size: 0.7rem;
+        }
+
+        /* --- MANIFIESTO SECTION --- */
+        .manifesto {
+            padding: 80px 5%;
+            text-align: center;
+        }
+
+        .manifesto-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 40px;
+            margin-top: 50px;
+        }
+
+        .manifesto-card {
+            background: var(--container-bg);
+            border: 4px solid var(--border);
+            padding: 40px;
+            box-shadow: var(--shadow);
+            position: relative;
+        }
+
+        .manifesto-card h3 {
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+            text-decoration: underline;
+        }
+
+        /* --- BOTONES --- */
+        .btn {
+            display: inline-block;
+            padding: 15px 30px;
+            background: var(--accent);
+            color: white;
+            text-decoration: none;
+            font-weight: bold;
+            border: 4px solid var(--border);
+            box-shadow: 6px 6px 0px var(--border);
+            margin-top: 20px;
+            cursor: pointer;
+        }
+
+        .btn:active {
+            transform: translate(3px, 3px);
+            box-shadow: 3px 3px 0px var(--border);
+        }
+
+        /* --- MODAL --- */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            padding: 20px;
+        }
+
+        .modal-content {
+            background: var(--container-bg);
+            max-width: 700px;
+            margin: 5vh auto;
+            border: 4px solid var(--border);
+            padding: 40px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        /* RESPONSIVE */
+        @media (max-width: 768px) {
+            .hero { grid-template-columns: 1fr; }
+            .hero-content { border-right: none; border-bottom: 4px solid var(--border); }
+        }
+    </style>
+</head>
+<body data-theme="light">
+
+    <nav>
+        <div style="font-weight: 900; font-size: 1.5rem;">BLACK<span style="color: var(--accent)">QUACK</span></div>
+        <button class="theme-switch" id="themeBtn">MODO: CLARO</button>
+    </nav>
+
+    <section class="hero">
+        <div class="hero-content">
+            <h1>IDEAS QUE HACEN <span>RUIDO</span></h1>
+            <p style="margin: 20px 0; font-size: 1.2rem;">
+                No somos cisnes elegantes. Somos el error que cobra vida. Somos BlackQuack Studio.
+            </p>
+            <a href="#taller" class="btn" onclick="openModal()">UNIRSE AL TALLER</a>
+        </div>
+        
+        <div class="hero-gallery">
+            <div class="img-box" data-id="01"><img src="https://picsum.photos/600/600?grayscale&random=1" alt="Studio 1"></div>
+            <div class="img-box" data-id="02"><img src="https://picsum.photos/600/600?grayscale&random=2" alt="Studio 2"></div>
+            <div class="img-box" data-id="03"><img src="https://picsum.photos/600/600?grayscale&random=3" alt="Studio 3"></div>
+            <div class="img-box" data-id="04"><img src="https://picsum.photos/600/600?grayscale&random=4" alt="Studio 4"></div>
+        </div>
+    </section>
+
+    <section class="manifesto">
+        <h2 style="font-size: 3rem; transform: skewX(-10deg);">MANIFIESTO_ADN</h2>
+        <div class="manifesto-grid">
+            <div class="manifesto-card">
+                <h3>01. SIN FÓRMULAS</h3>
+                <p>La perfección es aburrida. Ensuciarse las manos es la única forma de encontrar la magia.</p>
+            </div>
+            <div class="manifesto-card" style="transform: rotate(2deg);">
+                <h3>02. RUIDO = VIDA</h3>
+                <p>Si se mueve, funciona. Si hace ruido, está vivo. Tu voz importa, aunque sea un graznido.</p>
+            </div>
+            <div class="manifesto-card">
+                <h3>03. ANTI-CISNE</h3>
+                <p>No buscamos encajar en cánones estéticos. Celebramos la textura y el caos creativo.</p>
+            </div>
+        </div>
+    </section>
+
+    <div id="tallerModal" class="modal">
+        <div class="modal-content">
+            <button onclick="closeModal()" style="float: right; background: none; border: none; font-size: 2rem; color: var(--text); cursor: pointer;">&times;</button>
+            <h2 style="color: var(--accent);">LABORATORIO ANIMAKIDS</h2>
+            <p><strong>Lunes 16:30 - 17:30 hrs</strong></p>
+            <hr style="margin: 20px 0; border: 2px solid var(--border);">
+            
+            <p>Aprenderás bases de animación, cine, narrativa y construcción de dispositivos ópticos.</p>
+            
+            <div style="margin: 20px 0; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div style="border: 2px solid var(--border); padding: 10px;">
+                    <strong>Materiales Incluidos:</strong>
+                    <ul style="font-size: 0.8rem; padding-left: 15px;">
+                        <li>Tableros LED A5</li>
+                        <li>Software propio de captura</li>
+                        <li>Cámaras y trípodes</li>
+                    </ul>
+                </div>
+                <div style="border: 2px solid var(--border); padding: 10px;">
+                    <strong>Técnicas:</strong>
+                    <ul style="font-size: 0.8rem; padding-left: 15px;">
+                        <li>Stop Motion</li>
+                        <li>Flipbooks</li>
+                        <li>Pixilación</li>
+                    </ul>
+                </div>
+            </div>
+
+            <p style="background: var(--yellow); padding: 10px; color: black; font-weight: bold; text-align: center;">
+                VALOR: $20.000 MENSUALES
+            </p>
+            <center><button class="btn" style="width: 100%;">RESERVAR CUPO (15 MÁX)</button></center>
+        </div>
+    </div>
+
+    <footer style="padding: 50px; text-align: center; border-top: 4px solid var(--border);">
+        <p>BLACKQUACK © 2026 | AGAINST THE TIDE</p>
+    </footer>
+
+    <script>
+        // LÓGICA DARK MODE
+        const themeBtn = document.getElementById('themeBtn');
+        const body = document.body;
+
+        themeBtn.addEventListener('click', () => {
+            if (body.getAttribute('data-theme') === 'light') {
+                body.setAttribute('data-theme', 'dark');
+                themeBtn.innerText = 'MODO: OSCURO';
+            } else {
+                body.setAttribute('data-theme', 'light');
+                themeBtn.innerText = 'MODO: CLARO';
+            }
+        });
+
+        // LÓGICA MODAL
+        function openModal() {
+            document.getElementById('tallerModal').style.display = 'block';
+            body.style.overflow = 'hidden';
+        }
+
+        function closeModal() {
+            document.getElementById('tallerModal').style.display = 'none';
+            body.style.overflow = 'auto';
+        }
+
+        window.onclick = function(event) {
+            if (event.target.className === 'modal') closeModal();
+        }
+    </script>
+</body>
+</html>
