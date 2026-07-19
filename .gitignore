@@ -11,3 +11,6 @@ node_modules/
 
 # wrangler.toml es solo para 'wrangler pages dev' local; en producción manda el panel
 wrangler.toml
+
+# imágenes fuente pesadas y sin uso (el sitio usa el CDN de Contentful)
+images/product/
