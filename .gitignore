@@ -8,3 +8,6 @@
 node_modules/
 
 .DS_Store
+
+# wrangler.toml es solo para 'wrangler pages dev' local; en producción manda el panel
+wrangler.toml
