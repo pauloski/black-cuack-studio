@@ -1,0 +1,10 @@
+# Secretos — NUNCA versionar. .dev.vars contiene el FLOW_SECRET_KEY.
+.env
+.env.local
+.dev.vars
+
+# Estado local de Wrangler / Pages
+.wrangler/
+node_modules/
+
+.DS_Store

@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Estado de tu pedido — BlackQuack</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Archivo+Black&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
+<link rel="stylesheet" href="css/bq-v5.css">
+</head>
+<body data-page="gracias">
+
+<section class="page-hero brand">
+  <div class="wrap">
+    <span class="eyebrow dark" id="ghEyebrow" style="background:var(--color-dark);color:#fff;display:inline-flex;align-items:center;gap:8px;font-family:var(--font-title);font-weight:700;font-size:.72rem;letter-spacing:.22em;text-transform:uppercase;padding:7px 14px;border-radius:100px"><i data-lucide="loader" style="width:14px"></i> Pedido</span>
+    <h1 id="ghTitle">Revisando tu pago…</h1>
+    <p class="lead" id="ghLead">Un segundo mientras confirmamos con Flow.</p>
+  </div>
+  <span class="watermark">Quack</span>
+</section>
+
+<section class="section">
+  <div class="wrap prose" style="max-width:720px">
+    <div class="value-card" id="ghCard">
+      <div class="vic"><i data-lucide="package"></i></div>
+      <h3>Orden <span id="ghOrder">—</span></h3>
+      <p id="ghDetail">Estamos verificando el estado de tu transacción.</p>
+      <p style="margin-top:12px"><strong>Despacho:</strong> <em>Por pagar</em> (Starken o Chilexpress) — el costo del envío se paga al recibir el paquete.</p>
+      <div style="margin-top:18px;display:flex;gap:12px;flex-wrap:wrap">
+        <a class="btn" href="tienda.html" data-hover><i data-lucide="shopping-bag"></i> Volver a la tienda</a>
+        <a class="btn secondary" href="contacto.html" data-hover><i data-lucide="mail"></i> Contactar soporte</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/bq-v5.js"></script>
+<script src="js/checkout.js"></script>
+<script>
+/* El estado real lo resuelve /api/flow/return contra payment/getStatus y llega
+   acá como query param. Esta página solo comunica el resultado. */
+(function () {
+  var q = new URLSearchParams(location.search);
+  var status = q.get('status') || 'unknown';
+  var order = q.get('order') || '';
+
+  var VIEWS = {
+    paid: {
+      icon: 'check-circle', title: '¡Gracias por tu compra! 🦆',
+      lead: 'Tu pago fue aprobado y tu pedido BlackQuack ya está en preparación.',
+      detail: 'Te enviamos el comprobante por email. Cuando despachemos, recibirás el seguimiento del courier (Starken o Chilexpress).'
+    },
+    pending: {
+      icon: 'clock', title: 'Tu pago está pendiente',
+      lead: 'Flow aún no confirma la transacción.',
+      detail: 'Si pagaste con un medio en efectivo o transferencia, la confirmación puede tardar algunas horas. Te avisaremos por email apenas se acredite.'
+    },
+    rejected: {
+      icon: 'x-circle', title: 'Tu pago fue rechazado',
+      lead: 'La transacción no se completó y no se te cobró nada.',
+      detail: 'Puedes intentar nuevamente con otro medio de pago. Tu carrito sigue guardado.'
+    },
+    canceled: {
+      icon: 'slash', title: 'Cancelaste el pago',
+      lead: 'No se realizó ningún cobro.',
+      detail: 'Tu carrito sigue intacto por si quieres retomar la compra.'
+    },
+    unknown: {
+      icon: 'help-circle', title: 'No pudimos leer el estado',
+      lead: 'Tu pago pudo haberse procesado igualmente.',
+      detail: 'No vuelvas a pagar sin antes escribirnos: revisamos tu orden y te confirmamos en el día.'
+    }
+  };
+
+  var v = VIEWS[status] || VIEWS.unknown;
+  document.getElementById('ghTitle').textContent = v.title;
+  document.getElementById('ghLead').textContent = v.lead;
+  document.getElementById('ghDetail').textContent = v.detail;
+  document.getElementById('ghOrder').textContent = order || '—';
+  document.getElementById('ghEyebrow').innerHTML =
+    '<i data-lucide="' + v.icon + '" style="width:14px"></i> ' + status.toUpperCase();
+  document.querySelector('#ghCard .vic').innerHTML = '<i data-lucide="' + v.icon + '"></i>';
+  document.title = v.title + ' — BlackQuack';
+
+  /* Solo vaciamos el carrito con un pago aprobado. Si quedó pendiente, rechazado
+     o ilegible, se conserva para que el cliente pueda reintentar. */
+  if (status === 'paid') {
+    try {
+      localStorage.removeItem('bq_cart_v5');
+      if (typeof cart === 'object') { for (var k in cart) delete cart[k]; }
+      if (typeof renderCart === 'function') renderCart();
+      if (typeof updateCount === 'function') updateCount(false);
+      if (typeof fireConfetti === 'function') fireConfetti();
+    } catch (e) { /* no bloquear la confirmación por el carrito */ }
+  }
+  if (window.lucide) lucide.createIcons();
+})();
+</script>
+</body>
+</html>

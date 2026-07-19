@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BlackQuack Studio | Ideas que hacen ruido</title>
+    <style>
+        :root {
+            /* Paleta extraída de tus referencias */
+            --color-dark: #444444;
+            --color-accent: #F39200; /* Naranja Quack */
+            --color-light: #E6E6E6;
+            --color-yellow: #DEC520; /* Amarillo Animakids */
+            --color-white: #ffffff;
+            --font-main: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            --border-thick: 4px solid var(--color-dark);
+            --shadow: 8px 8px 0px var(--color-dark);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-main);
+            background-color: var(--color-light);
+            color: var(--color-dark);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* --- UTILIDADES --- */
+        .marquee {
+            background: var(--color-dark);
+            color: var(--color-white);
+            padding: 10px 0;
+            white-space: nowrap;
+            overflow: hidden;
+            font-weight: bold;
+            text-transform: uppercase;
+            border-bottom: var(--border-thick);
+        }
+
+        .marquee-content {
+            display: inline-block;
+            animation: scroll 20s linear infinite;
+        }
+
+        @keyframes scroll {
+            from { transform: translateX(0); }
+            to { transform: translateX(-50%); }
+        }
+
+        /* --- HEADER --- */
+        header {
+            padding: 40px 5%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--color-yellow);
+            border-bottom: var(--border-thick);
+        }
+
+        .logo-container {
+            max-width: 250px;
+        }
+
+        .btn-main {
+            background: var(--color-accent);
+            color: var(--color-white);
+            padding: 15px 30px;
+            text-decoration: none;
+            font-weight: 900;
+            border: var(--border-thick);
+            box-shadow: var(--shadow);
+            transition: 0.2s;
+            text-transform: uppercase;
+        }
+
+        .btn-main:hover {
+            transform: translate(-4px, -4px);
+            box-shadow: 12px 12px 0px var(--color-dark);
+        }
+
+        /* --- HERO SECTION --- */
+        .hero {
+            padding: 80px 5%;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            align-items: center;
+        }
+
+        .hero-text h1 {
+            font-size: 5rem;
+            line-height: 0.9;
+            text-transform: uppercase;
+            margin-bottom: 20px;
+            transform: rotate(-2deg);
+        }
+
+        .hero-text span {
+            background: var(--color-accent);
+            padding: 0 10px;
+        }
+
+        .hero-image {
+            border: var(--border-thick);
+            background: var(--color-white);
+            padding: 20px;
+            box-shadow: var(--shadow);
+            transform: rotate(2deg);
+            text-align: center;
+        }
+
+        /* --- SECCIÓN MANIFIESTO --- */
+        .manifesto {
+            background: var(--color-dark);
+            color: var(--color-white);
+            padding: 80px 5%;
+            text-align: center;
+        }
+
+        .manifesto h2 {
+            font-size: 3rem;
+            margin-bottom: 40px;
+            color: var(--color-yellow);
+        }
+
+        .grid-manifesto {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+        }
+
+        .card-manifesto {
+            border: 2px solid var(--color-yellow);
+            padding: 30px;
+            transition: 0.3s;
+        }
+
+        .card-manifesto:hover {
+            background: var(--color-yellow);
+            color: var(--color-dark);
+        }
+
+        /* --- SERVICIOS / PRODUCTOS --- */
+        .services {
+            padding: 80px 5%;
+        }
+
+        .service-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 40px;
+        }
+
+        .card {
+            background: var(--color-white);
+            border: var(--border-thick);
+            padding: 30px;
+            box-shadow: var(--shadow);
+            position: relative;
+        }
+
+        .card.featured {
+            background: var(--color-yellow);
+        }
+
+        .badge {
+            position: absolute;
+            top: -20px;
+            right: -10px;
+            background: var(--color-accent);
+            color: white;
+            padding: 5px 15px;
+            border: var(--border-thick);
+            font-weight: bold;
+            transform: rotate(5deg);
+        }
+
+        /* --- MODAL TALLER --- */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .modal-content {
+            background: var(--color-light);
+            max-width: 800px;
+            margin: 40px auto;
+            border: var(--border-thick);
+            padding: 40px;
+            position: relative;
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 2rem;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .tag {
+            display: inline-block;
+            background: var(--color-dark);
+            color: white;
+            padding: 4px 12px;
+            margin: 5px;
+            font-size: 0.8rem;
+        }
+
+        /* --- RESPONSIVE --- */
+        @media (max-width: 768px) {
+            .hero { grid-template-columns: 1fr; }
+            .hero-text h1 { font-size: 3rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="marquee">
+        <div class="marquee-content">
+            BE ORIGINAL • MAKE SOME NOISE • MAKE SOME QUACK • CREATIVE CHAOS • AGAINST THE TIDE • MIND-BLOWN • 
+            BE ORIGINAL • MAKE SOME NOISE • MAKE SOME QUACK • CREATIVE CHAOS • AGAINST THE TIDE • MIND-BLOWN • 
+        </div>
+    </div>
+
+    <header>
+        <div class="logo-container">
+            <h2 style="font-weight: 900; letter-spacing: -2px;">BLACK<span style="color: var(--color-accent);">QUACK</span></h2>
+        </div>
+        <nav>
+            <a href="#taller" class="btn-main">Ver Talleres</a>
+        </nav>
+    </header>
+
+    <section class="hero">
+        <div class="hero-text">
+            <h1>IDEAS QUE HACEN <span>RUIDO</span></h1>
+            <p style="font-size: 1.2rem; margin-top: 20px;">
+                No hay una sola forma correcta de crear. Apostamos por el juego, la experimentación y el error como motor creativo.
+            </p>
+        </div>
+        <div class="hero-image">
+            <h2 style="font-size: 4rem;">🦆</h2>
+            <p><strong>REBELIÓN DEL PATITO ÚNICO</strong></p>
+            <p>No somos cisnes. Somos ruido.</p>
+        </div>
+    </section>
+
+    <section class="manifesto">
+        <h2>MANIFIESTO</h2>
+        <div class="grid-manifesto">
+            <div class="card-manifesto">
+                <h3>No seas perfecto</h3>
+                <p>Solo tienes que empezar. El error es señal de vida.</p>
+            </div>
+            <div class="card-manifesto">
+                <h3>Caos Creativo</h3>
+                <p>El desorden es un estado de la materia creativa.</p>
+            </div>
+            <div class="card-manifesto">
+                <h3>Contra Corriente</h3>
+                <p>No buscamos lo "bonito", buscamos lo que te vuele la mente.</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="services">
+        <div class="service-grid">
+            <div class="card featured" id="taller">
+                <div class="badge">¡INSCRIPCIONES ABIERTAS!</div>
+                <h3>ANIMAKIDS</h3>
+                <p>Taller de animación para niños (Abril - Noviembre).</p>
+                <ul style="margin: 20px 0; list-style: none;">
+                    <li>📍 Lunes 16:30 hrs</li>
+                    <li>💰 $20.000 mensual</li>
+                </ul>
+                <button class="btn-main" onclick="openModal()">+ INFO DEL TALLER</button>
+            </div>
+
+            <div class="card">
+                <div class="badge" style="background: var(--color-dark);">PRONTO</div>
+                <h3>STOPMOTION APP</h3>
+                <p>Nuestra propia herramienta de captura para creadores rebeldes.</p>
+            </div>
+
+            <div class="card">
+                <div class="badge" style="background: var(--color-dark);">PRONTO</div>
+                <h3>QUACK TOYS</h3>
+                <p>Kits de animación física y juguetes ópticos artesanales.</p>
+            </div>
+        </div>
+    </section>
+
+    <div id="tallerModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeModal()">&times;</span>
+            <h2 style="color: var(--color-accent); font-size: 2.5rem;">LABORATORIO ANIMAKIDS</h2>
+            <p><em>Por Paulo Correa</em></p>
+            <hr style="margin: 20px 0;">
+            
+            <h3>¿Qué haremos?</h3>
+            <div>
+                <span class="tag">STOP MOTION</span> <span class="tag">CUT-OUT</span> 
+                <span class="tag">FLIPBOOKS</span> <span class="tag">PIXILACIÓN</span>
+                <span class="tag">ZOÓTROPOS</span>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px;">
+                <div>
+                    <h4>Equipamiento Incluido:</h4>
+                    <ul>
+                        <li>Tableros de luz LED A5</li>
+                        <li>Estación de captura propia</li>
+                        <li>Cámaras y trípodes</li>
+                    </ul>
+                </div>
+                <div>
+                    <h4>Debes traer:</h4>
+                    <ul>
+                        <li>Caja plástica con manilla</li>
+                        <li>Croquera y lápices</li>
+                        <li>Plasticina (12 colores)</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div style="margin-top: 30px; background: var(--color-yellow); padding: 20px; border: var(--border-thick);">
+                <p><strong>Cupo máximo:</strong> 15 mentes creativas.</p>
+                <p><strong>Inicio:</strong> Lunes 6 de Abril.</p>
+                <a href="#" class="btn-main" style="display: inline-block; margin-top: 10px;">DESCARGAR PROGRAMA PDF</a>
+            </div>
+        </div>
+    </div>
+
+    <footer style="text-align: center; padding: 40px; background: var(--color-dark); color: white;">
+        <p>BLACKQUACK STUDIO © 2026 - MAKE SOME NOISE</p>
+    </footer>
+
+    <script>
+        function openModal() {
+            document.getElementById('tallerModal').style.display = 'block';
+            document.body.style.overflow = 'hidden'; // Evita scroll
+        }
+
+        function closeModal() {
+            document.getElementById('tallerModal').style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+
+        // Cerrar modal si se hace click fuera de él
+        window.onclick = function(event) {
+            let modal = document.getElementById('tallerModal');
+            if (event.target == modal) {
+                closeModal();
+            }
+        }
+    </script>
+</body>
+</html>

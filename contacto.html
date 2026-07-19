@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Contacto — BlackQuack</title>
+<meta name="description" content="Contáctanos para talleres, consultas creativas y colaboraciones.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Archivo+Black&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
+<link rel="stylesheet" href="css/bq-v5.css">
+</head>
+<body data-page="contacto">
+
+<section class="page-hero brand">
+  <div class="wrap">
+    <span class="eyebrow dark" style="background:var(--color-dark);color:#fff;display:inline-flex;align-items:center;gap:8px;font-family:var(--font-title);font-weight:700;font-size:.72rem;letter-spacing:.22em;text-transform:uppercase;padding:7px 14px;border-radius:100px"><i data-lucide="mail" style="width:14px"></i> Contacto</span>
+    <h1>Hagamos <span class="hl">Quack</span> juntos</h1>
+    <p class="lead">¿Taller para tu colegio, una consulta creativa o una idea loca? Escríbenos.</p>
+  </div>
+  <span class="watermark">Hola</span>
+</section>
+
+<section class="section">
+  <div class="wrap split-2" style="align-items:start">
+    <div>
+      <div class="sec-head"><span class="eyebrow brand"><i data-lucide="send" style="width:14px"></i> Escríbenos</span><h2 style="font-family:var(--font-display);font-size:clamp(1.8rem,4vw,3rem);text-transform:uppercase;line-height:1">Cuéntanos tu idea</h2></div>
+      <form id="contactForm">
+        <div class="field"><label>Nombre</label><input required type="text" placeholder="Tu nombre"></div>
+        <div class="field-row">
+          <div class="field"><label>Email</label><input required type="email" placeholder="tu@email.com"></div>
+          <div class="field"><label>Asunto</label><input type="text" placeholder="Taller / consulta / idea"></div>
+        </div>
+        <div class="field"><label>Mensaje</label><input required type="text" placeholder="Cuéntanos qué necesitas"></div>
+        <button type="submit" class="cta-brutal" style="display:inline-flex;width:auto;padding:20px 34px" data-hover><i data-lucide="send"></i> Enviar mensaje</button>
+      </form>
+    </div>
+    <div class="prose">
+      <div class="value-card" style="margin-bottom:18px"><div class="vic"><i data-lucide="mail"></i></div><h3>Email</h3><p><a href="mailto:hola@blackquack.cl" data-hover style="color:var(--color-brand);font-weight:700">hola@blackquack.cl</a></p></div>
+      <div class="value-card" style="margin-bottom:18px"><div class="vic"><i data-lucide="map-pin"></i></div><h3>Dónde estamos</h3><p>Quilpué · Región de Valparaíso, Chile.</p></div>
+      <div class="value-card"><div class="vic"><i data-lucide="school"></i></div><h3>Talleres para colegios</h3><p>Agenda una demostración gratuita para tu establecimiento.</p><button class="btn" data-hover style="margin-top:12px" onclick="openModal('workshopModal')"><i data-lucide="calendar-check"></i> Agendar demo</button></div>
+    </div>
+  </div>
+</section>
+
+<script src="js/bq-v5.js"></script>
+</body>
+</html>

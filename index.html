@@ -1,418 +1,225 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BlackQuack Studio | Ideas que hacen Ruido</title>
-    
-    <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;700;900&family=Space+Mono&display=swap" rel="stylesheet">
-
-<link rel="stylesheet" href="css/styles.css">
-  
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BlackQuack | Make some Quack — Animación sin pantallas</title>
+<meta name="description" content="BlackQuack: estudio de animación independiente chileno, laboratorio pedagógico y taller Maker. Diseñamos herramientas físicas para despertar la imaginación análoga.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Archivo+Black&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
+<link rel="stylesheet" href="css/bq-v5.css">
 </head>
-<body data-theme="light">
+<body data-page="home" data-preloader>
 
-    <div id="preloader">
-        <lottie-player src="blacky.json" background="transparent" speed="1" style="width: 300px; height: 300px;" loop autoplay></lottie-player>
-        <p style="font-family:'Space Mono', monospace; font-weight:bold; letter-spacing:4px; margin-top:20px;">INITIALIZING_QUACK...</p>
+<!-- ============ BIG HERO (apertura tipo Puma) ============
+     PARA CAMBIAR LA IMAGEN: sube tu foto ancha de alto impacto como
+     images/hero.jpg (ideal ~2000px de ancho). Mientras no exista, se muestra
+     un degradado de marca como placeholder. -->
+<section class="bighero" id="bighero">
+  <div class="bighero-media">
+    <img src="images/hero.jpg" alt="BlackQuack" class="bighero-img"
+         onerror="this.style.display='none';var h=document.getElementById('heroHint');if(h)h.style.display='flex'">
+    <div class="bighero-hint" id="heroHint"><i data-lucide="image"></i><span>Reemplaza <code>images/hero.jpg</code> con tu foto de alto impacto</span></div>
+    <div class="bighero-scrim"></div>
+  </div>
+  <div class="bighero-overlay">
+    <div class="wrap">
+      <span class="bighero-eyebrow">Make some Quack</span>
+      <h1 class="bighero-title">HERRAMIENTAS<br>PARA CREAR</h1>
+      <p class="bighero-sub">Animación análoga, cultura maker y diseño para despertar la imaginación. Sin pantallas, con las manos.</p>
+      <div class="bighero-ctas">
+        <a href="tienda.html" class="btn lg" data-hover>Descubrir la tienda <i data-lucide="arrow-right"></i></a>
+        <a href="#inicio" class="btn secondary lg" data-hover>Nuestra historia</a>
+      </div>
     </div>
-
-<nav id="main-nav">
-    <div class="logo">
-        <img src="images/logo-nav-light.svg" alt="BlackQuack Logo" class="logo-nav-img">
-    </div>
-    <div class="nav-links">
-        <a href="#animakids">Animakids</a>
-        <a href="#labs">Labs</a>
-        <a href="#store">Store</a>
-    </div>
-    <button onclick="document.body.setAttribute('data-theme', document.body.getAttribute('data-theme')==='light'?'dark':'light')" class="btn-brutal" style="padding: 8px 15px; font-size: 10px; box-shadow: none; margin:0;">CHAOS</button>
-</nav>
-
-    <section class="hero" id="hero-trigger">
-        <div class="hero-side-text" style="animation-delay: 0s;">MAKE SOME<br>NOISE</div>
-        
-        <div class="hero-center">
-            <img src="images/logo-light.svg" class="main-logo" alt="BlackQuack Logo">
-            <h1>IDEAS QUE HACEN<br><span style="color:var(--accent)">RUIDO.</span></h1>
-            <p>Ecosistema creativo impulsado por la animación para nuevos creadores.</p>
-            <a href="#animakids" class="btn-brutal">Explorar el Ecosistema</a>
-        </div>
-
-        <div class="hero-side-text" style="animation-delay: 2s;">AGAINST THE<br>TIDE</div>
-    </section>
-
-       <div class="marquee-strip">
-        <div class="marquee-strip-content">
-            STOP MOTION • CREATIVIDAD • CUT-OUT • DIBUJO • FLIPBOOKS • PIXILACIÓN • ESCENOGRAFÍA • STOP MOTION • CREATIVIDAD • CUT-OUT • DIBUJO • FLIPBOOKS • PIXILACIÓN • ESCENOGRAFÍA •&nbsp;
-        </div>
-        <div class="marquee-strip-content">
-            STOP MOTION • CREATIVIDAD • CUT-OUT • DIBUJO • FLIPBOOKS • PIXILACIÓN • ESCENOGRAFÍA • STOP MOTION • CREATIVIDAD • CUT-OUT • DIBUJO • FLIPBOOKS • PIXILACIÓN • ESCENOGRAFÍA •&nbsp;
-        </div>
-    </div> 
-<!--
-          <section class="postura">
-        <div>
-            <h2 style="color: var(--accent);">Contra la<br>Corriente.</h2>
-            <p style="font-size: 1.2rem;">No enseñamos a encajar. Enseñamos a crear. Tu forma original no es un error: es tu superpoder.</p>
-        </div>
-        <div class="postura-box">
-            <h3>MANIFIESTO</h3>
-            <p style="margin-top: 20px; font-size: 1.5rem; font-weight: 900;">Si se mueve, funciona. Si hace ruido, está vivo.</p>
-            <p style="margin-top: 15px;">No hay una forma correcta. No hay una historia correcta. Hay movimiento.</p>
-        </div>
-    </section>
-      -->
-
-
-
-
-<section class="postura-caos" id="duck-observer-trigger">
-    <div class="m-intro">
-        <p>No tienes que hacerlo perfecto.</p>
-        <p class="t-accent">Solo tienes que empezar.</p>
-    </div>
-
-    <div class="swimmer-experience-caos">
-        <h2 class="duck-title">CONTRA LA<br>CORRIENTE.</h2>
-        
-        <img src="images/blacky-3.svg" class="duck-swimmer-caos" alt="Pato BlackQuack">
-        <div class="underline-wave-caos"></div>
-        
-        <p class="m-float f-1">No hay una forma correcta.</p>
-        <p class="m-float f-2">No hay un estilo correcto.</p>
-        <p class="m-float f-3">No hay una historia correcta.</p>
-    </div>
-
-    <div class="m-footer-caos">
-        <div class="m-live">
-            <span class="l-1">Si se mueve, <strong>funciona.</strong></span>
-            <span class="l-2">Si hace ruido, <strong>está vivo.</strong></span>
-        </div>
-        <p class="m-superpower">Tu forma original: es tu <strong>superpoder.</strong></p>
-    </div>
+  </div>
 </section>
 
-
-<!--
-<section class="services-ecosystem" id="ecosistema">
-    <div class="service-grid">
-        <div class="card featured">
-            <div class="badge-brutal">¡INSCRIPCIONES ABIERTAS!</div>
-            <h3>ANIMAKIDS</h3>
-            <p>Taller de animación para niños (Abril - Noviembre).</p>
-            <ul class="card-list">
-                <li>📍 Lunes 16:30 hrs</li>
-                <li>💰 $20.000 mensual</li>
-            </ul>
-            <button class="btn-brutal" onclick="openModal()">+ INFO DEL TALLER</button>
-        </div>
-
-        <div class="card">
-            <div class="badge-brutal dark">PRONTO</div>
-            <h3>STOPMOTION APP</h3>
-            <p>Nuestra propia herramienta de captura para creadores rebeldes.</p>
-        </div>
-
-        <div class="card">
-            <div class="badge-brutal dark">PRONTO</div>
-            <h3>QUACK TOYS</h3>
-            <p>Kits de animación física y juguetes ópticos artesanales.</p>
-        </div>
-    </div>
-</section>
--->
-
-
-
-<section class="services-ecosystem" id="ecosistema">
-    <div class="service-grid">
-        <div class="card sold-out">
-            <div class="badge-brutal black">CUPO AGOTADO</div>
-            <div class="card-brand">BQ_ANIMAKIDS</div>
-            <h3>LABORATORIO<br>ESTACIONAL</h3>
-            <p>Taller intensivo de formación para nuevos creadores (Abril - Noviembre).</p>
-            <ul class="card-list">
-                <li>📍 Quilpué / Yerpún</li>
-                <li>🛠️ Formato Presencial</li>
-            </ul>
-            <button class="btn-brutal disabled" disabled>PRÓXIMO CICLO: JUNIO</button>
-        </div>
-
-        <div class="card featured">
-            <div class="badge-brutal">PRONTO / PRE-ORDER</div>
-            <div class="card-brand">BQ_STORE</div>
-            <h3>QUACK-BOX:<br>SURVIVAL KIT</h3>
-            <p>Tu estación de animación portátil: Tablero LED A5, flipbook profesional, herramientas de dibujo técnico, plasticina y acceso premium a la App.</p>
-            <button class="btn-brutal" onclick="location.href='#store'">RESERVAR MI BOX</button>
-        </div>
-
-        <div class="card labs-card">
-            <div class="badge-brutal dark">BETA V0.9.5</div>
-            <div class="card-brand">BQ_LABS</div>
-            <h3>ANIMATION<br>STUDIO APP</h3>
-            <p>Captura frame-by-frame, papel cebolla y gestión de equipos. Conecta tu mobile como cámara remota y anima en tu Mac.</p>
-            <button class="btn-brutal" onclick="location.href='#labs'">SÉ UN BETA TESTER</button>
-        </div>
-    </div>
-</section>
-
-
-
-<div id="tallerModal" class="modal-overlay">
-    <div class="modal-content">
-        <span class="close-modal" onclick="closeModal()">&times;</span>
-        <h2 class="modal-title">LABORATORIO ANIMAKIDS</h2>
-        <p class="modal-subtitle">Por Paulo Correa</p>
-        <hr class="modal-divider">
-        
-        <div class="modal-body">
-            <h3>¿Qué haremos?</h3>
-            <div class="tag-container">
-                <span class="tag">STOP MOTION</span>
-                <span class="tag">CUT-OUT</span>
-                <span class="tag">FLIPBOOKS</span>
-                <span class="tag">PIXILACIÓN</span>
-                <span class="tag">ZOÓTROPOS</span>
-            </div>
-            
-            <div class="modal-grid">
-                <div class="modal-col">
-                    <h4>Equipamiento Incluido:</h4>
-                    <ul>
-                        <li>Tableros de luz LED A5</li>
-                        <li>Estación de captura propia</li>
-                        <li>Cámaras y trípodes</li>
-                    </ul>
-                </div>
-                <div class="modal-col">
-                    <h4>Debes traer:</h4>
-                    <ul>
-                        <li>Caja plástica con manilla</li>
-                        <li>Croquera y lápices</li>
-                        <li>Plasticina (12 colores)</li>
-                    </ul>
-                </div>
-            </div>
-
-            <div class="modal-info-box">
-                <p><strong>Cupo máximo:</strong> 15 mentes creativas.</p>
-                <p><strong>Inicio:</strong> Lunes 6 de Abril.</p>
-                <a href="#" class="btn-brutal" style="margin-top: 15px;">DESCARGAR PROGRAMA PDF</a>
-            </div>
-        </div>
-    </div>
+<!-- huinca de palabras animadas, pegada justo bajo el hero -->
+<div class="marquee" aria-hidden="true">
+  <div class="marquee-track" id="marquee">
+    <span>Stop Motion</span><span class="dot">✦</span><span>Flipbooks</span><span class="dot">✦</span><span>Mesa de Luz</span><span class="dot">✦</span><span>Persistencia Retiniana</span><span class="dot">✦</span><span>Cut-Out</span><span class="dot">✦</span><span>Pixilación</span><span class="dot">✦</span><span>Make some Quack</span><span class="dot">✦</span>
+  </div>
 </div>
-    <section id="animakids">
-        <div class="section-content">
-            <div class="animakids-header">
-                <img src="images/blacky-animakids-light.svg" alt="Animakids Icon">
-                <div>
-                    <h2>ANIMAKIDS</h2>
-                    <p style="font-size: 1.5rem; font-weight: 700;">APRENDES (Formación)</p>
-                </div>
-            </div>
-            <p>Un espacio donde los niños descubren la animación creando desde el juego. Aquí no se trata de aprender "lo correcto", sino de explorar, probar y dar vida a las ideas.</p>
-            <div class="video-box">
-                <video controls style="width: 100%; height: 100%; object-fit: cover;">
-                    <source src="0216.mp4" type="video/mp4">
-                </video>
-            </div>
-            <div style="margin-top: 50px; display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
-                <div style="border-left: 4px solid var(--accent); padding-left: 20px;">
-                    <h4>TÉCNICAS</h4>
-                    <p>Cut-out, Stop Motion, Plastilina y Pixilación.</p>
-                </div>
-                <div style="border-left: 4px solid var(--accent); padding-left: 20px;">
-                    <h4>OBJETIVO</h4>
-                    <p>Estimular la creatividad y resolver retos visuales.</p>
-                </div>
-            </div>
-        </div>
-    </section>
 
-    <section id="labs">
-        <div class="labs-grid">
-            <div>
-                <span class="labs-status">BETA V0.9.5 ACTIVE</span>
-                <h2 style="font-size: 4rem; color: #fff; margin-bottom: 20px;">BQ_LABS</h2>
-                <p>El laboratorio donde las ideas se convierten en herramientas. Desarrollamos tecnología para potenciar la creatividad con intención.</p>
-                <div style="margin-top: 40px;">
-                    <h4 style="color: #0f0;">PROYECTO: ANIMATION_STUDIO</h4>
-                    <ul style="margin-top: 20px; list-style: none;">
-                        <li>> Onion Skin dimmer_neon [OK]</li>
-                        <li>> FPS_Control_Realtime [OK]</li>
-                        <li>> Cloud_Higiene_Firebase [OK]</li>
-                        <li>> Patito_Bloqueador_System [OK]</li>
-                    </ul>
-                </div>
-            </div>
-            <div class="labs-img-dummy">
-                <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); text-align:center;">
-                    <p>[ANIMATION APP INTERFACE]</p>
-                </div>
-            </div>
-        </div>
-    </section>
+<!-- carrusel de productos limpio -->
+<section class="hero-collection">
+  <div class="wrap">
+    <div class="hc-head">
+      <h2>BQ Store</h2>
+      <a href="tienda.html" class="hc-more" data-hover>Ver toda la tienda <i data-lucide="arrow-right"></i></a>
+    </div>
+    <div class="hc-track" id="heroCarousel"><!-- JS inject --></div>
+  </div>
+</section>
 
-    <section id="store">
-        <h2 style="font-size: 4rem; margin-bottom: 50px; text-align: center;">BQ_STORE</h2>
-        <div class="store-grid">
-            <div class="store-item">
-                <div style="height: 200px; background: #eee; margin-bottom: 20px;">[KIT_MAKER_IMG]</div>
-                <h3>Maker Kit</h3>
-                <p>Todo para tu primer corto.</p>
-            </div>
-            <div class="store-item">
-                <div style="height: 200px; background: #eee; margin-bottom: 20px;">[LED_TABLE_IMG]</div>
-                <h3>Tablero LED A5</h3>
-                <p>Iluminación profesional portátil.</p>
-            </div>
-            <div class="store-item" style="opacity: 0.5;">
-                <div style="height: 200px; background: #eee; margin-bottom: 20px;">[TOYS_IMG]</div>
-                <h3>Juguetes Ópticos</h3>
-                <p>Próximamente.</p>
-            </div>
-        </div>
-    </section>
+<!-- (marquee movido bajo el hero · sección del pato movida sobre el manifiesto) -->
 
+<!-- ============ SHOWCASE: video full-page que se encoge a una grilla bento al scrollear
+     (misma solución interactiva que Talleres: mismo video, misma interactividad) ============ -->
+<section class="showcase" id="showcase">
+  <div class="showcase-sticky">
+    <div class="bento">
+      <div class="bento-cell" style="grid-area:a"><img src="https://dummyimage.com/500x500/1e1e1e/6f6f6f&text=Taller" alt="" loading="lazy"></div>
+      <div class="bento-cell" style="grid-area:b"><img src="https://dummyimage.com/700x400/242424/6f6f6f&text=Stop+Motion" alt="" loading="lazy"></div>
+      <div class="bento-cell" style="grid-area:c"><img src="https://dummyimage.com/500x500/1a1a1a/6f6f6f&text=Aula" alt="" loading="lazy"></div>
+      <div class="bento-cell" style="grid-area:d"><img src="https://dummyimage.com/400x700/222/6f6f6f&text=Frame" alt="" loading="lazy"></div>
+      <div class="bento-cell bento-video" style="grid-area:V">
+        <video src="animakids/media/video-animakids.mp4" muted loop autoplay playsinline preload="metadata"></video>
+      </div>
+      <div class="bento-cell" style="grid-area:e"><img src="https://dummyimage.com/400x700/1c1c1c/6f6f6f&text=Maker" alt="" loading="lazy"></div>
+      <div class="bento-cell" style="grid-area:f"><img src="https://dummyimage.com/500x500/242424/6f6f6f&text=STEAM" alt="" loading="lazy"></div>
+      <div class="bento-cell" style="grid-area:g"><img src="https://dummyimage.com/700x400/1a1a1a/6f6f6f&text=Animar" alt="" loading="lazy"></div>
+      <div class="bento-cell" style="grid-area:h"><img src="https://dummyimage.com/500x500/1e1e1e/6f6f6f&text=Quack" alt="" loading="lazy"></div>
+    </div>
+    <!-- texto sobre el video (visible con el video al 100%; se desvanece al scrollear) -->
+    <div class="showcase-overlay" id="scOverlay">
+      <div class="wrap">
+        <span class="bighero-eyebrow">Animakids · Taller en el aula</span>
+        <h2 class="showcase-title">Talleres de<br>animación</h2>
+        <p class="showcase-sub">Metodología STEAM, tableros LED propios y un método que premia el error creativo. Transformamos salas comunes en estudios de animación activos.</p>
+        <button class="btn lg" data-hover onclick="openModal('workshopModal')"><i data-lucide="calendar-check"></i> Coordina una demo en tu colegio</button>
+      </div>
+    </div>
+    <div class="showcase-cue"><span>Scroll</span><i data-lucide="chevron-down"></i></div>
+  </div>
+</section>
 
-    <section class="visual-gallery-marquee" id="store">
-        <div class="gallery-hero">
-            <div class="gallery-text-side">
-                <h2 class="big-title-side">ANIMATION<br>STARTER <span>KIT</span></h2>
-                <p class="side-quote">
-                    <strong>Taco de papel + Tableta LED A5 + Lápices + Plasticina + Acceso Pro a nuestra App.</strong><br><br>
-                    Todo lo que necesitas para tu primer corto animado en un solo pack "Maker".
-                </p>
-                <button class="btn-brutal">RESERVAR KIT</button>
-            </div>
-            <div class="gallery-grid-side">
-                <div class="img-frame"><img src="https://picsum.photos/600/600?random=30" alt="Kit 1"></div>
-                <div class="img-frame"><img src="https://picsum.photos/600/600?random=31" alt="Tableta LED"></div>
-                <div class="img-frame"><img src="https://picsum.photos/600/600?random=32" alt="Flipbooks"></div>
-                <div class="img-frame"><img src="https://picsum.photos/600/600?random=33" alt="Software Access"></div>
-            </div>
-        </div>
-        <div class="marquee-strip">
-            <div class="marquee-strip-content">
-                FLIPBOOKS • TABLETAS LED • STOP MOTION APP • KITS MAKER • JUGUETES ÓPTICOS • FLIPBOOKS • TABLETAS LED • STOP MOTION APP • KITS MAKER •&nbsp;
-            </div>
-        </div>
-    </section>
-
-    <section class="visual-gallery-marquee">
-    <div class="gallery-hero">
-        <div class="gallery-text-side">
-            <h2 class="big-title-side">IDEAS QUE<br>HACEN <span>RUIDO</span></h2>
-            <p class="side-quote">
-                No enseñamos a ser cisnes. Enseñamos a enorgullecerse del ruido, la textura y la voz propia.
-            </p>
-            <button class="btn-brutal" onclick="openModal()">TALLER ANIMAKIDS 2026</button>
-        </div>
-        
-        <div class="gallery-grid-side">
-            <div class="img-frame"><img src="https://picsum.photos/600/600?random=21" alt="Frame 1"></div>
-            <div class="img-frame"><img src="https://picsum.photos/600/600?random=22" alt="Frame 2"></div>
-            <div class="img-frame"><img src="https://picsum.photos/600/600?random=23" alt="Frame 3"></div>
-            <div class="img-frame"><img src="https://picsum.photos/600/600?random=24" alt="Frame 4"></div>
-        </div>
+<!-- ============ LABS — BlackQuack StopMotion (informativo / bento) ============ -->
+<section class="block" id="labs">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow" style="background:var(--color-brand)"><i data-lucide="flask-conical" style="width:14px"></i> BQ Labs · En desarrollo</span>
+      <h2 style="color:#fff">BlackQuack StopMotion</h2>
+      <p style="color:#c9c9c9">La app que convierte cualquier tablet o teléfono en una estación de animación para el aula. Captura frame a frame, papel cebolla y trabajo por equipos — diseñada junto a docentes para los talleres Animakids.</p>
     </div>
 
+    <div class="labs-bento">
+      <!-- HERO tile -->
+      <div class="lb lb-hero">
+        <div class="lb-hero-top">
+          <span class="lb-badge">BETA v0.9.5</span>
+          <div class="lb-appicon"><i data-lucide="clapperboard"></i></div>
+        </div>
+        <h3>Una estación de animación<br>en cada pupitre</h3>
+        <p>Sin instalaciones complejas: abre la app, conecta la cámara y anima. Pensada para 15 mentes creativas trabajando en paralelo.</p>
+        <a href="#contacto" class="lb-cta" data-hover><i data-lucide="rocket"></i> Sé beta tester</a>
+      </div>
 
+      <!-- Screenshot 1 -->
+      <div class="lb lb-shot lb-shot1">
+        <img src="https://dummyimage.com/800x600/6f6f6f/fff&text=Captura+frame+a+frame" alt="Interfaz de captura BlackQuack StopMotion" loading="lazy">
+        <span class="lb-tag">01 · Captura</span>
+      </div>
+
+      <!-- Feature tiles -->
+      <div class="lb lb-feat a">
+        <div class="lb-ic"><i data-lucide="layers"></i></div>
+        <h4>Papel cebolla</h4>
+        <p>Superpone el cuadro anterior para animar con precisión.</p>
+      </div>
+      <div class="lb lb-feat b">
+        <div class="lb-ic"><i data-lucide="smartphone"></i></div>
+        <h4>Cámara remota</h4>
+        <p>Usa el teléfono como cámara y controla todo desde la tablet.</p>
+      </div>
+      <div class="lb lb-feat c">
+        <div class="lb-ic"><i data-lucide="users"></i></div>
+        <h4>Modo aula</h4>
+        <p>Gestiona equipos, proyectos y avances de todo el curso.</p>
+      </div>
+      <div class="lb lb-feat d">
+        <div class="lb-ic"><i data-lucide="cloud"></i></div>
+        <h4>Nube segura</h4>
+        <p>Los trabajos se guardan e higienizan en la nube del taller.</p>
+      </div>
+
+      <!-- Screenshot 2 -->
+      <div class="lb lb-shot lb-shot2">
+        <img src="https://dummyimage.com/800x600/6f6f6f/fff&text=Modo+aula+%C2%B7+equipos" alt="Modo aula de la app BlackQuack StopMotion" loading="lazy">
+        <span class="lb-tag">02 · Equipos</span>
+      </div>
+
+      <!-- Roadmap tile -->
+      <div class="lb lb-road">
+        <span class="lb-road-k">Roadmap</span>
+        <ul>
+          <li><i data-lucide="check"></i> Captura &amp; onion skin</li>
+          <li><i data-lucide="check"></i> Control de FPS en tiempo real</li>
+          <li><i data-lucide="loader"></i> Exportación a video 4K</li>
+          <li><i data-lucide="loader"></i> Biblioteca de sonidos</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ TIENDA ============ -->
+<!-- Banner de tienda estilizado (reemplaza las cards del fondo; ya hay carrusel arriba).
+     Sube images/store-banner.jpg para la foto de fondo; mientras, degradado de marca. -->
+<section class="store-banner" id="tienda">
+  <div class="store-banner-media">
+    <img src="images/store-banner.jpg" alt="" class="store-banner-img"
+         onerror="this.style.display='none';var h=document.getElementById('sbHint');if(h)h.style.display='flex'">
+    <div class="store-banner-hint" id="sbHint"><i data-lucide="image"></i><span>Reemplaza <code>images/store-banner.jpg</code></span></div>
+    <div class="store-banner-scrim"></div>
+  </div>
+  <div class="store-banner-inner">
+    <div class="wrap">
+      <span class="bighero-eyebrow">BQ-Store</span>
+      <h2 class="store-banner-title">Makers &amp; Herramientas</h2>
+      <p class="store-banner-sub">Kits para armar y herramientas Pro-Studio. Eco-diseño, madera pre-cortada y tecnología para animar de verdad.</p>
+      <a href="tienda.html" class="btn lg" data-hover>Explorar la tienda <i data-lucide="arrow-right"></i></a>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CONTRA LA CORRIENTE — ilustración del pato (sobre el manifiesto) ============ -->
+<section class="postura-caos" id="inicio">
+  <div class="m-intro">
+    <p>No tienes que hacerlo perfecto.</p>
+    <p class="t-accent">Solo tienes que empezar.</p>
+  </div>
+
+  <div class="swimmer-experience-caos">
+    <h2 class="duck-title">CONTRA LA<br>CORRIENTE.</h2>
+    <img src="images/blacky-3.svg" class="duck-swimmer-caos" alt="Pato BlackQuack">
+    <div class="underline-wave-caos"></div>
+    <p class="m-float f-1">No hay una forma correcta.</p>
+    <p class="m-float f-2">No hay un estilo correcto.</p>
+    <p class="m-float f-3">No hay una historia correcta.</p>
+  </div>
+
+  <!-- titular principal (sin párrafo, botones ni chips: se integra con el manifiesto) -->
+  <div class="hero-info">
+    <h1 class="hero-title">IDEAS QUE HACEN<br><span class="accent">RUIDO.</span></h1>
+  </div>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<!-- ============ MANIFIESTO (present, not modal) ============ -->
+<section class="block" id="manifiesto">
+  <div class="wrap">
+    <div class="manifesto-top">
+      <h2>El<br>Manifiesto<br><span>BlackQuack</span></h2>
+      <p class="intro">No enseñamos a encajar: enseñamos a crear. Animación <strong>sin pantallas</strong>, hecha con las manos.</p>
+    </div>
+
+    <div class="principles">
+      <div class="principle"><span class="num">01</span><h3>No hay una forma correcta</h3><span class="k">Originalidad radical</span></div>
+      <div class="principle"><span class="num">02</span><h3>El error es el punto de partida, no el final</h3><span class="k">Método Maker</span></div>
+      <div class="principle"><span class="num">03</span><h3>Tu forma original es tu superpoder</h3><span class="k">Contra la corriente</span></div>
+    </div>
+  </div>
 </section>
 
 
-<section class="hero-editorial" id="hero-trigger">
-    <div class="hero-editorial-text">
-        <h1>IDEAS QUE HACEN<br><span style="color:var(--accent)">RUIDO.</span></h1>
-        <p>No somos un estudio convencional. Somos un ecosistema de juego y experimentación para mentes que van contra la corriente.</p>
-        <div>
-            <a href="#animakids" class="btn-brutal">Explorar Animakids</a>
-        </div>
-    </div>
-    <div class="hero-editorial-img">
-        <img src="https://picsum.photos/800/800?random=15" alt="BlackQuack Studio" class="main-photo-brutal">
-    </div>
-</section>
-
-<section class="history-section">
-    <div class="history-img-frame">
-        <img src="https://picsum.photos/600/800?random=16" style="width:100%; height:100%; object-fit:cover; border: 2px solid var(--border);" alt="Historia">
-    </div>
-    <div class="history-content">
-        <h2>Nuestra Historia</h2>
-        <p style="font-size: 1.2rem; margin-bottom: 20px;">BlackQuack nace de una idea simple: <strong>no hay una sola forma correcta de crear.</strong></p>
-        <p>Representamos al creador que se ensucia las manos, prueba, falla y vuelve a intentar. Si hace ruido, está vivo.</p>
-        <br>
-        <p style="font-style: italic; border-left: 4px solid var(--accent); padding-left: 20px; font-size: 0.95rem;">
-            "No enseñamos a los niños a ser cisnes uniformes. Les enseñamos a enorgullecerse de su propio graznido."
-        </p>
-    </div>
-</section>
-
-    <footer>
-        <img src="images/paulo_correa_bq.png" class="director-img" alt="Paulo Correa">
-        <div>
-            <h2>Paulo Correa</h2>
-            <p style="color: var(--accent); font-weight: 900;">DIRECTOR CREATIVO</p>
-            <p style="margin: 30px 0;">BlackQuack nace de descubrir que la animación tradicional es el puente perfecto para enseñar a crear con intención.</p>
-            <p style="font-size: 0.8rem; opacity: 0.7;">Diseñador PUCV / Docente de Animación Digital.</p>
-            <p style="margin-top: 40px; font-weight: 900;">MAKE SOME NOISE.</p>
-        </div>
-    </footer>
-
-    <script>
-        // Lógica de Splash
-        const preloader = document.getElementById('preloader');
-        if (!sessionStorage.getItem('bq_splash_vfinal')) {
-            setTimeout(() => { 
-                preloader.classList.add('preloader-hidden'); 
-                sessionStorage.setItem('bq_splash_vfinal', 'true');
-            }, 4000);
-        } else { preloader.style.display = 'none'; }
-
-        // Lógica Nav Scroll
-        const nav = document.getElementById('main-nav');
-        const hero = document.getElementById('hero-trigger');
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (!entry.isIntersecting) nav.classList.add('nav-visible');
-                else nav.classList.remove('nav-visible');
-            });
-        }, { threshold: 0.1 });
-        observer.observe(hero);
-
-        // Smooth Scroll
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
-                e.preventDefault();
-                document.querySelector(this.getAttribute('href')).scrollIntoView({ behavior: 'smooth' });
-            });
-        });
-
-
-// Funciones para el Modal
-function openModal() {
-    document.getElementById('tallerModal').style.display = 'block';
-    document.body.style.overflow = 'hidden'; // Bloquea el scroll del body
-}
-
-function closeModal() {
-    document.getElementById('tallerModal').style.display = 'none';
-    document.body.style.overflow = 'auto'; // Libera el scroll
-}
-
-// Cerrar si se hace click fuera del contenido blanco
-window.onclick = function(event) {
-    let modal = document.getElementById('tallerModal');
-    if (event.target == modal) {
-        closeModal();
-    }
-}
-  
-
-    </script>
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/bq-v5.js"></script>
+<script src="js/checkout.js"></script>
 </body>
 </html>

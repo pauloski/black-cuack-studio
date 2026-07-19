@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — Sincronizar stock — BlackQuack</title>
+<!-- Página de administración. NO enlazada desde el sitio público.
+     El secreto NO está en el código: lo pega el admin y vive solo en su sesión. -->
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<link rel="stylesheet" href="css/bq-v5.css">
+<style>
+  .admin-wrap{max-width:820px;margin:0 auto;padding:40px 20px}
+  .admin-card{background:var(--bg-primary,#fff);border:var(--border-width,3px) solid var(--color-dark);border-radius:var(--border-radius,16px);padding:26px;margin-bottom:20px}
+  .admin-wrap h1{font-family:var(--font-display);text-transform:uppercase;font-size:clamp(1.6rem,4vw,2.4rem);line-height:1;margin-bottom:6px}
+  .admin-sub{color:#666;margin-bottom:26px;font-size:.95rem}
+  .admin-row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
+  .admin-row .field{flex:1;min-width:240px;margin-bottom:0}
+  .warn{background:var(--color-accent,#DEC520);border:var(--border-width,3px) solid var(--color-dark);border-radius:10px;padding:12px 16px;font-size:.86rem;line-height:1.45;margin-bottom:20px;display:flex;gap:10px}
+  .warn svg{width:20px;height:20px;flex-shrink:0;margin-top:1px}
+  #result{margin-top:22px}
+  table{width:100%;border-collapse:collapse;font-size:.86rem}
+  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid #e5e5e5}
+  th{font-family:var(--font-title);text-transform:uppercase;font-size:.72rem;letter-spacing:.08em}
+  td.delta.up{color:#1a7f37;font-weight:700}
+  td.delta.down{color:#C0392B;font-weight:700}
+  .muted{color:#999}
+  .ok-line{display:inline-flex;align-items:center;gap:8px;color:#1a7f37;font-weight:700;margin-bottom:14px}
+  .err-line{display:inline-flex;align-items:center;gap:8px;color:#C0392B;font-weight:700}
+  code{background:#f0f0f0;padding:2px 6px;border-radius:5px;font-family:var(--font-mono,monospace);font-size:.85em}
+</style>
+</head>
+<body data-page="admin" style="background:#f7f7f7">
+
+<div class="admin-wrap">
+  <h1>Sincronizar stock</h1>
+  <p class="admin-sub">Reabastece D1 con el stock inicial que acabas de publicar en Contentful.</p>
+
+  <div class="warn">
+    <i data-lucide="alert-triangle"></i>
+    <div>Esto <strong>machaca</strong> el stock en vivo con el valor de Contentful. Córrelo <strong>justo después</strong> de reponer, y evita hacerlo si hay pagos a medio completar (podrías descuadrar una reserva en curso).</div>
+  </div>
+
+  <div class="admin-card">
+    <div class="admin-row">
+      <div class="field">
+        <label for="secret">Secreto de administración</label>
+        <input id="secret" type="password" placeholder="ADMIN_RESYNC_SECRET" autocomplete="off">
+      </div>
+      <div class="field" style="flex:0 0 auto;min-width:180px">
+        <label for="product">Producto (opcional)</label>
+        <input id="product" type="text" placeholder="Todos — o ej: BQ-002">
+      </div>
+      <button class="btn lg" id="btnSync" data-hover><i data-lucide="refresh-cw"></i> Sincronizar ahora</button>
+    </div>
+    <div id="result"></div>
+  </div>
+
+  <p class="admin-sub" style="font-size:.82rem">
+    También puedes llamarlo directo:
+    <code>/api/admin/resync-stock?secret=TU_SECRETO</code> (agrega <code>&amp;product=BQ-002</code> para uno solo).
+  </p>
+
+  <h1 style="margin-top:40px">Liberar reservas abandonadas</h1>
+  <p class="admin-sub">Devuelve a D1 el stock de compras que se iniciaron pero nunca se pagaron.</p>
+
+  <div class="warn" style="background:#eef">
+    <i data-lucide="info"></i>
+    <div>Antes de liberar, cada orden se verifica contra Flow: si está pagada no se toca (se consuma). Solo libera reservas vencidas y no pagadas. Usa <strong>simular</strong> primero para ver qué haría.</div>
+  </div>
+
+  <div class="admin-card">
+    <div class="admin-row">
+      <div class="field" style="flex:0 0 auto;min-width:200px">
+        <label for="olderThan">Reservas más viejas que (min)</label>
+        <input id="olderThan" type="number" value="60" min="0">
+      </div>
+      <label class="field" style="flex:0 0 auto;display:flex;align-items:center;gap:8px;min-width:auto">
+        <input id="dryRun" type="checkbox" checked style="width:auto"> <span>Simular (no libera)</span>
+      </label>
+      <button class="btn secondary lg" id="btnSweep" data-hover><i data-lucide="broom"></i> Barrer ahora</button>
+    </div>
+    <div id="sweepResult"></div>
+  </div>
+
+  <p class="admin-sub" style="font-size:.82rem">
+    Directo: <code>/api/admin/sweep?secret=TU_SECRETO&amp;olderThan=60</code> (agrega <code>&amp;dryRun=1</code> para simular).
+    Para automatizarlo, agenda un cron externo que haga POST a esta URL cada 15-30 min.
+  </p>
+</div>
+
+<script>
+(function () {
+  var elSecret = document.getElementById('secret');
+  var elProduct = document.getElementById('product');
+  var elResult = document.getElementById('result');
+  var btn = document.getElementById('btnSync');
+
+  // El secreto se recuerda solo durante la sesión del navegador (no en el código).
+  elSecret.value = sessionStorage.getItem('bq_admin_secret') || '';
+
+  var esc = function (s) {
+    return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+    });
+  };
+
+  function renderSummary(data) {
+    var rows = [];
+    (data.summary || []).forEach(function (p) {
+      if (p.error) {
+        rows.push('<tr><td>' + esc(p.product) + '</td><td colspan="3" class="err-line">' + esc(p.error) + '</td></tr>');
+        return;
+      }
+      (p.changes || []).forEach(function (c) {
+        var label = [c.size, c.color, c.design].filter(Boolean).join(' · ') || '<span class="muted">único</span>';
+        var delta = c.new - (c.old || 0);
+        var cls = delta > 0 ? 'up' : (delta < 0 ? 'down' : 'muted');
+        var sign = delta > 0 ? '+' + delta : String(delta);
+        rows.push('<tr><td>' + esc(p.product) + '</td><td>' + label +
+          '</td><td>' + (c.old == null ? '<span class="muted">nuevo</span>' : c.old) + ' → <strong>' + c.new +
+          '</strong></td><td class="delta ' + cls + '">' + sign + '</td></tr>');
+      });
+    });
+    elResult.innerHTML =
+      '<div class="ok-line"><i data-lucide="check-circle"></i> ' + data.skus + ' SKUs actualizados en ' + data.products + ' productos</div>' +
+      '<table><thead><tr><th>Producto</th><th>Variante</th><th>Stock</th><th>Δ</th></tr></thead><tbody>' +
+      rows.join('') + '</tbody></table>';
+    if (window.lucide) lucide.createIcons();
+  }
+
+  async function sync() {
+    var secret = elSecret.value.trim();
+    if (!secret) { elResult.innerHTML = '<div class="err-line">Ingresa el secreto.</div>'; lucide.createIcons(); return; }
+    sessionStorage.setItem('bq_admin_secret', secret);
+
+    var url = '/api/admin/resync-stock';
+    var prod = elProduct.value.trim();
+    if (prod) url += '?product=' + encodeURIComponent(prod);
+
+    var original = btn.innerHTML;
+    btn.disabled = true; btn.innerHTML = 'Sincronizando…';
+    elResult.innerHTML = '';
+    try {
+      // POST con el secreto en el header (no queda en la URL ni en el historial).
+      var res = await fetch(url, { method: 'POST', headers: { 'x-admin-secret': secret } });
+      var data = await res.json();
+      if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
+      renderSummary(data);
+    } catch (e) {
+      elResult.innerHTML = '<div class="err-line"><i data-lucide="x-circle"></i> ' + esc(e.message) + '</div>';
+      if (window.lucide) lucide.createIcons();
+    } finally {
+      btn.disabled = false; btn.innerHTML = original; if (window.lucide) lucide.createIcons();
+    }
+  }
+
+  btn.addEventListener('click', sync);
+  elSecret.addEventListener('keydown', function (e) { if (e.key === 'Enter') sync(); });
+
+  /* ---------- Sweeper ---------- */
+  var btnSweep = document.getElementById('btnSweep');
+  var sweepResult = document.getElementById('sweepResult');
+
+  async function sweep() {
+    var secret = elSecret.value.trim();
+    if (!secret) { sweepResult.innerHTML = '<div class="err-line">Ingresa el secreto (arriba).</div>'; lucide.createIcons(); return; }
+    sessionStorage.setItem('bq_admin_secret', secret);
+
+    // Ojo: olderThan=0 es válido (barrer todo). No usar `|| 60`, que lo pisaría.
+    var rawOlder = document.getElementById('olderThan').value.trim();
+    var older = rawOlder === '' ? 60 : Math.max(0, Number(rawOlder) || 0);
+    var dry = document.getElementById('dryRun').checked;
+    var url = '/api/admin/sweep?olderThan=' + older + (dry ? '&dryRun=1' : '');
+
+    var original = btnSweep.innerHTML;
+    btnSweep.disabled = true; btnSweep.innerHTML = 'Barriendo…';
+    sweepResult.innerHTML = '';
+    try {
+      var res = await fetch(url, { method: 'POST', headers: { 'x-admin-secret': secret } });
+      var data = await res.json();
+      if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
+      var verbo = data.dryRun ? 'se liberarían' : 'liberadas';
+      var rows = (data.details || []).map(function (d) {
+        return '<tr><td>' + esc(d.order) + '</td><td>' + esc(d.action) +
+          '</td><td>' + (d.flow_status != null ? 'estado ' + d.flow_status : (d.reason ? esc(d.reason) : '')) +
+          '</td><td>' + (d.age_min != null ? d.age_min + ' min' : '') + '</td></tr>';
+      }).join('');
+      sweepResult.innerHTML =
+        '<div class="ok-line"><i data-lucide="check-circle"></i> ' + data.scanned + ' órdenes · ' +
+        data.released + ' ' + verbo + ' · ' + data.committed + ' consumadas · ' + data.errors + ' con error</div>' +
+        (rows ? '<table><thead><tr><th>Orden</th><th>Acción</th><th>Flow</th><th>Edad</th></tr></thead><tbody>' + rows + '</tbody></table>'
+              : '<p class="muted">Sin reservas abandonadas que liberar.</p>');
+      if (window.lucide) lucide.createIcons();
+    } catch (e) {
+      sweepResult.innerHTML = '<div class="err-line"><i data-lucide="x-circle"></i> ' + esc(e.message) + '</div>';
+      if (window.lucide) lucide.createIcons();
+    } finally {
+      btnSweep.disabled = false; btnSweep.innerHTML = original; if (window.lucide) lucide.createIcons();
+    }
+  }
+  btnSweep.addEventListener('click', sweep);
+
+  lucide.createIcons();
+})();
+</script>
+</body>
+</html>

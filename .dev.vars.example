@@ -1,0 +1,27 @@
+# PLANTILLA — este archivo SÍ se versiona. Nunca escribas llaves reales acá.
+# Las credenciales van en .dev.vars (que está en .gitignore).
+#
+# Uso: copiar a .dev.vars y rellenar con tus credenciales de SANDBOX.
+#   cp .dev.vars.example .dev.vars
+# Wrangler carga .dev.vars como env de las Pages Functions en local.
+#
+# En producción NO se usa ningún archivo: las variables se configuran en
+# Cloudflare Pages > Settings > Variables and Secrets.
+
+# --- Flow (SECRETO — obtener en flow.cl > Mi cuenta > Configuración > API) ---
+FLOW_API_KEY=""
+FLOW_SECRET_KEY=""
+
+# OBLIGATORIA. "1" = sandbox.flow.cl · "0" = producción (cobra dinero real).
+# No tiene default: si falta, el checkout se bloquea en vez de adivinar entorno.
+FLOW_SANDBOX="1"
+
+# --- Contentful (Delivery API, solo lectura, público) ---
+CONTENTFUL_SPACE_ID=""
+CONTENTFUL_ACCESS_TOKEN=""
+CONTENTFUL_ENVIRONMENT="master"
+
+# --- Admin: resync de stock (SECRETO) ---
+# Protege /api/admin/resync-stock. Inventa un valor largo y aleatorio.
+# En producción cárgalo en Cloudflare Pages > Settings > Variables como Secret.
+ADMIN_RESYNC_SECRET=""

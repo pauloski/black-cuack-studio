@@ -1,0 +1,191 @@
+[
+  {
+    "ID": "BQ-001",
+    "Categoria": "Herramientas",
+    "product_title": "Tablero de Luz LED Slim A4",
+    "descripción": "Mesa de luz LED ultra delgada con tres niveles de intensidad táctil. Diseñada para calcar, animar y perfeccionar tus secuencias paso a paso de forma cómoda.",
+    "size": ["A5", "A4", "A3"],
+    "stock": 45,
+    "precio": 15990,
+    "image_url": "https://dummyimage.com/600x600/444444/f39200.png&text=Tablero+LED+Slim",
+    "image_views": [
+      "https://dummyimage.com/600x600/444444/dec520.png&text=Mesa+Encendida",
+      "https://dummyimage.com/600x600/444444/e6e6e6.png&text=Perfil+Ultra+Delgado"
+    ]
+  },
+  {
+    "ID": "BQ-002",
+    "Categoria": "Makers",
+    "product_title": "Pack 3 Flipbooks BlackQuack",
+    "descripción": "Pack de 3 blocks de animación de 11.5cm x 6.5cm. Papel de gramaje de 120gr para el correcto traspaso visual de una página a otra y rigidez suficiente para el paso de hojas bajo la presión del dedo. De 60 hojas y con tornillos Chicago M5x10mm metálicos desmontables para añadir, quitar o reorganizar tus animaciones.",
+    "size": "11.5cm x 6.5cm",
+    "stock": 120,
+    "precio": 11990,
+    "image_url": "https://dummyimage.com/600x600/444444/f39200.png&text=Pack+3+Flipbooks",
+    "image_views": [
+      "https://dummyimage.com/600x600/444444/dec520.png&text=Tornillos+Chicago",
+      "https://dummyimage.com/600x600/444444/e6e6e6.png&text=Grosor+Hojas+120g"
+    ]
+  },
+  {
+    "ID": "BQ-003",
+    "Categoria": "Herramientas",
+    "product_title": "Guante de Animación Profesional",
+    "descripción": "Guante de lycra elástica de dos dedos. Reduce la fricción de la mano con la mesa de luz o la tablet de dibujo, garantizando un deslizamiento suave y libre de manchas.",
+    "size": ["S", "M", "L"],
+    "stock": 75,
+    "precio": 4990,
+    "image_url": "https://dummyimage.com/600x600/444444/f39200.png&text=Guante+de+Animacion",
+    "image_views": [
+      "https://dummyimage.com/600x600/444444/dec520.png&text=Ajuste+Lycra"
+    ]
+  },
+  {
+    "ID": "BQ-004",
+    "Categoria": "Herramientas",
+    "product_title": "Plastilina Stop Motion Pro",
+    "descripción": "Plastilina de alta densidad especialmente formulada para animación de stop motion. Resistente al calor de las lámparas de estudio, no pierde su forma y es altamente maleable.",
+    "size": "",
+    "stock": 50,
+    "precio": 8990,
+    "image_url": "https://dummyimage.com/600x600/444444/f39200.png&text=Plastilina+Pro+Stop+Motion",
+    "image_views": [
+      "https://dummyimage.com/600x600/444444/dec520.png&text=Set+de+Colores"
+    ]
+  },
+  {
+    "ID": "BQ-005",
+    "Categoria": "Makers",
+    "product_title": "Kit Autómatas Mecánicos DIY",
+    "descripción": "Piezas de madera pre-cortadas por láser para ensamblar tus propios autómatas. Experimenta mecánicas sencillas que cobran vida de forma análoga.",
+    "size": "",
+    "stock": 30,
+    "precio": 14990,
+    "image_url": "https://dummyimage.com/600x600/444444/f39200.png&text=Kit+Automata+DIY",
+    "image_views": [
+      "https://dummyimage.com/600x600/444444/dec520.png&text=Corte+Laser+Detalle"
+    ]
+  },
+  {
+    "ID": "BQ-006",
+    "Categoria": "Makers",
+    "product_title": "Zootropo Didáctico Classic",
+    "descripción": "Juguete óptico clásico que permite comprender los fundamentos de la persistencia retiniana. Incluye bandas ilustradas de animación y tiras en blanco para tus dibujos.",
+    "size": "",
+    "stock": 40,
+    "precio": 12990,
+    "image_url": "https://dummyimage.com/600x600/444444/f39200.png&text=Zootropo+Didactico",
+    "image_views": [
+      "https://dummyimage.com/600x600/444444/dec520.png&text=Tiras+de+Animacion"
+    ]
+  },
+  {
+    "ID": "BQ-007",
+    "Categoria": "Makers",
+    "product_title": "Mechanical Flipbook Machine",
+    "descripción": "Dispositivo cinético con engranajes y manivela diseñado para montar tus flipbooks y pasarlos de manera continua. El cruce perfecto entre arte e ingeniería de escritorio.",
+    "size": "",
+    "stock": 20,
+    "precio": 24990,
+    "image_url": "https://dummyimage.com/600x600/444444/f39200.png&text=Flipbook+Machine",
+    "image_views": [
+      "https://dummyimage.com/600x600/444444/dec520.png&text=Mecanismo+Interno"
+    ]
+  },
+  {
+    "ID": "BQ-008",
+    "Categoria": "Merchandising",
+    "product_title": "Polerón BlackQuack Hoodie",
+    "descripción": "Polerón con capucha premium de algodón pesado. Comodidad brutalista y diseño de marca 'Make Some Quack' para el estudio diario.",
+    "size": ["S", "M", "L", "XL"],
+    "stock": 60,
+    "precio": 29990,
+    "image_url": "https://dummyimage.com/600x600/444444/f39200.png&text=Poleron+BlackQuack",
+    "image_views": [
+      "https://dummyimage.com/600x600/444444/dec520.png&text=Bordado+Espalda"
+    ]
+  },
+  {
+    "ID": "BQ-009",
+    "Categoria": "Art",
+    "product_title": "Cuadro Ilustración Oficial BlackQuack Team",
+    "descripción": "Impresión digital giclée sobre papel Fine Art. Una vista divertida e ilustrada del equipo trabajando en sus historias locas de animación.",
+    "size": ["30x40cm", "50x70cm"],
+    "stock": 15,
+    "precio": 18990,
+    "image_url": "https://dummyimage.com/600x600/444444/f39200.png&text=Cuadro+Oficial+BQ",
+    "image_views": [
+      "https://dummyimage.com/600x600/444444/dec520.png&text=Detalle+Impresion"
+    ]
+  },
+  {
+    "ID": "BQ-010",
+    "Categoria": "Art",
+    "product_title": "Ilustración Coleccionable - 'El Escape del Pato'",
+    "descripción": "Lámina impresa oficial. Ilustración de autor que plasma la esencia de la rebeldía creativa de la marca.",
+    "size": ["A4", "A3"],
+    "stock": 30,
+    "precio": 9990,
+    "image_url": "https://dummyimage.com/600x600/444444/f39200.png&text=Ilustracion+Escape+Pato",
+    "image_views": []
+  },
+  {
+    "ID": "BQ-011",
+    "Categoria": "Art",
+    "product_title": "Ilustración Coleccionable - 'Mesa de Luz Caótica'",
+    "descripción": "Lámina impresa oficial. Vista conceptual que celebra el hermoso desorden que surge al animar en el estudio.",
+    "size": ["A4", "A3"],
+    "stock": 30,
+    "precio": 9990,
+    "image_url": "https://dummyimage.com/600x600/444444/f39200.png&text=Ilustracion+Mesa+Caotica",
+    "image_views": []
+  },
+  {
+    "ID": "BQ-012",
+    "Categoria": "Art",
+    "product_title": "Ilustración Coleccionable - 'Storyboard Retro'",
+    "descripción": "Lámina impresa oficial. Una mirada retrospectiva a los primeros bosquejos de producción de BlackQuack.",
+    "size": ["A4", "A3"],
+    "stock": 30,
+    "precio": 9990,
+    "image_url": "https://dummyimage.com/600x600/444444/f39200.png&text=Ilustracion+Storyboard+Retro",
+    "image_views": []
+  },
+  {
+    "ID": "BQ-013",
+    "Categoria": "Merchandising",
+    "product_title": "Tazón Matte 'Make Some Quack'",
+    "descripción": "Tazón cerámico negro mate con grabado de alta resolución. Tu compañero oficial para tazas de café eternas en sesiones de stop motion.",
+    "size": "",
+    "stock": 100,
+    "precio": 5990,
+    "image_url": "https://dummyimage.com/600x600/444444/f39200.png&text=Tazon+BlackQuack",
+    "image_views": [
+      "https://dummyimage.com/600x600/444444/dec520.png&text=Grabado+Frontal"
+    ]
+  },
+  {
+    "ID": "BQ-014",
+    "Categoria": "Herramientas",
+    "product_title": "Trípode de Animación Stop Motion Flex",
+    "descripción": "Trípode ultra articulado y de alta fricción. Mantiene tu smartphone o tablet inmóvil durante largas capturas de fotogramas.",
+    "size": "",
+    "stock": 25,
+    "precio": 14990,
+    "image_url": "https://dummyimage.com/600x600/444444/f39200.png&text=Tripode+Flex+Stop+Motion",
+    "image_views": [
+      "https://dummyimage.com/600x600/444444/dec520.png&text=Soporte+Ajustable"
+    ]
+  },
+  {
+    "ID": "BQ-015",
+    "Categoria": "Herramientas",
+    "product_title": "Set Sujetadores de Escenografía",
+    "descripción": "Pinzas resistentes para sujetar fondos fotográficos, planos de papel o placas de escenario en tu set de stop motion.",
+    "size": "",
+    "stock": 80,
+    "precio": 6990,
+    "image_url": "https://dummyimage.com/600x600/444444/f39200.png&text=Set+Sujetadores",
+    "image_views": []
+  }
+]

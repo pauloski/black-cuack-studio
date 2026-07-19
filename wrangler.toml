@@ -1,0 +1,25 @@
+name = "black-cuack-studio"
+pages_build_output_dir = "."
+compatibility_date = "2024-11-01"
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  D1 — base de stock transaccional.  Binding en el código: env.ORDERS_DB
+# ─────────────────────────────────────────────────────────────────────────────
+#  DÓNDE VA EL ID QUE TE DA CLOUDFLARE:
+#  Cuando crees la base (dashboard o `wrangler d1 create blackquack-stock`),
+#  Cloudflare te entrega un "database_id" con forma de UUID, por ejemplo:
+#      a1b2c3d4-5678-90ab-cdef-1234567890ab
+#  Pégalo EXACTAMENTE en la línea `database_id` de abajo, reemplazando
+#  "PEGA-AQUI-EL-DATABASE-ID". Mantén las comillas. NO cambies `binding` ni
+#  `database_name`.
+#
+#  IMPORTANTE (Pages): este archivo lo usa `wrangler pages dev` en LOCAL. Para
+#  el sitio DESPLEGADO, además debes vincular la base en el panel:
+#      Cloudflare Pages > tu proyecto > Settings > Functions > D1 database
+#      bindings > Add:  Variable name = ORDERS_DB,  D1 database = blackquack-stock
+#  (igual que hiciste con el KV ORDERS_KV). El binding del panel es el que manda
+#  en producción; el database_id de aquí es para el entorno local/CLI.
+[[d1_databases]]
+binding = "ORDERS_DB"
+database_name = "blackquack-stock"
+database_id = "5aee6c63-61c5-470a-9aec-3a10bfd0b494"

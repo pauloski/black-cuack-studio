@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Talleres Animakids — BlackQuack</title>
+<meta name="description" content="Talleres de animación STEAM para colegios: tableros LED, stop motion y método Maker.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Archivo+Black&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
+<link rel="stylesheet" href="css/bq-v5.css">
+</head>
+<body data-page="talleres">
+
+<section class="bighero taller-hero">
+  <div class="bighero-media">
+    <img src="images/taller-001.JPG" alt="Taller de animación en el aula" class="bighero-img">
+    <div class="bighero-scrim"></div>
+  </div>
+  <div class="bighero-overlay">
+    <div class="wrap">
+      <span class="bighero-eyebrow">Animakids · Taller en el aula</span>
+      <h1 class="bighero-title">Talleres de<br>animación</h1>
+      <p class="bighero-sub">Metodología STEAM, tableros LED propios y un método que premia el error creativo. Transformamos salas comunes en estudios de animación activos.</p>
+      <a href="#showcase" class="btn lg" data-hover>Ver el taller <i data-lucide="arrow-down"></i></a>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SHOWCASE: video full-page que se encoge a una grilla bento al scrollear ============
+     El centro es el video en loop; las demás celdas son fotos (dummy por ahora). -->
+<section class="showcase" id="showcase">
+  <div class="showcase-sticky">
+    <div class="bento">
+      <div class="bento-cell" style="grid-area:a"><img src="https://dummyimage.com/500x500/1e1e1e/6f6f6f&text=Taller" alt="" loading="lazy"></div>
+      <div class="bento-cell" style="grid-area:b"><img src="https://dummyimage.com/700x400/242424/6f6f6f&text=Stop+Motion" alt="" loading="lazy"></div>
+      <div class="bento-cell" style="grid-area:c"><img src="https://dummyimage.com/500x500/1a1a1a/6f6f6f&text=Aula" alt="" loading="lazy"></div>
+      <div class="bento-cell" style="grid-area:d"><img src="https://dummyimage.com/400x700/222/6f6f6f&text=Frame" alt="" loading="lazy"></div>
+      <div class="bento-cell bento-video" style="grid-area:V">
+        <video src="animakids/media/video-animakids.mp4" muted loop autoplay playsinline preload="metadata"></video>
+      </div>
+      <div class="bento-cell" style="grid-area:e"><img src="https://dummyimage.com/400x700/1c1c1c/6f6f6f&text=Maker" alt="" loading="lazy"></div>
+      <div class="bento-cell" style="grid-area:f"><img src="https://dummyimage.com/500x500/242424/6f6f6f&text=STEAM" alt="" loading="lazy"></div>
+      <div class="bento-cell" style="grid-area:g"><img src="https://dummyimage.com/700x400/1a1a1a/6f6f6f&text=Animar" alt="" loading="lazy"></div>
+      <div class="bento-cell" style="grid-area:h"><img src="https://dummyimage.com/500x500/1e1e1e/6f6f6f&text=Quack" alt="" loading="lazy"></div>
+    </div>
+    <div class="showcase-cue"><span>Scroll</span><i data-lucide="chevron-down"></i></div>
+  </div>
+</section>
+
+<!-- ============ ANIMAKIDS · TALLER (editorial split) ============ -->
+<section id="animakids">
+  <div class="ak-split">
+    <div class="ak-left">
+      <span class="eyebrow"><i data-lucide="camera" style="width:14px"></i> Animakids · Taller en el aula</span>
+      <h2 class="ak-title">Hacemos cine<br>en tu <span class="hl">aula</span></h2>
+      <p class="ak-sub">No enseñamos a ser cisnes elegantes: enseñamos a hacer ruido con las manos. Método STEAM, tableros LED propios y el error como punto de partida — la sala común se vuelve un estudio de animación.</p>
+      <button class="ak-join" data-hover onclick="openModal('workshopModal')">
+        <i data-lucide="party-popper"></i> Unirse al taller
+      </button>
+    </div>
+
+    <div class="ak-grid">
+      <figure data-hover><img src="images/taller-001.JPG" alt="El aula convertida en estudio de animación" loading="lazy"><span class="frame-label">FRAME_01</span><figcaption>El aula como estudio</figcaption></figure>
+      <figure data-hover><img src="images/taller-003.png" alt="Estudiante creando su personaje" loading="lazy"><span class="frame-label">FRAME_02</span><figcaption>Creando su personaje</figcaption></figure>
+      <figure data-hover><img src="images/taller-005.png" alt="Dibujando frame por frame" loading="lazy"><span class="frame-label">FRAME_03</span><figcaption>Frame por frame</figcaption></figure>
+      <figure data-hover><img src="images/taller-004.png" alt="Manos a la obra en el taller" loading="lazy"><span class="frame-label">FRAME_04</span><figcaption>Manos a la obra</figcaption></figure>
+    </div>
+  </div>
+
+  <!-- VIDEO CAROUSEL -->
+  <div class="wrap ak-videos">
+    <div class="reel-label dark">
+      <span>Lo que crean nuestros estudiantes</span>
+      <div class="ln"></div>
+      <div class="carousel-nav">
+        <button class="cnav" id="vidPrev" data-hover aria-label="Anterior"><i data-lucide="chevron-left"></i></button>
+        <button class="cnav" id="vidNext" data-hover aria-label="Siguiente"><i data-lucide="chevron-right"></i></button>
+      </div>
+    </div>
+    <div class="vid-track" id="vidTrack">
+      <!-- Slide 1: registro real del taller -->
+      <div class="vid-card">
+        <video controls preload="none" poster="images/taller-001.JPG"><source src="animakids/media/video-animakids.mp4" type="video/mp4"></video>
+        <div class="vid-meta"><h4>Detrás de cámaras · Animakids</h4><span>Registro del taller presencial</span></div>
+      </div>
+      <!-- Slides siguientes: reemplaza el src por el video real de cada estudiante -->
+      <div class="vid-card">
+        <video controls preload="none" poster="images/taller-003.png"><source src="animakids/media/video-animakids.mp4" type="video/mp4"></video>
+        <div class="vid-meta"><h4>“Mi primer stop motion”</h4><span>Estudiante · 4° básico</span></div>
+      </div>
+      <div class="vid-card">
+        <video controls preload="none" poster="images/taller-005.png"><source src="animakids/media/video-animakids.mp4" type="video/mp4"></video>
+        <div class="vid-meta"><h4>“El pato que saltó”</h4><span>Estudiante · 6° básico</span></div>
+      </div>
+      <div class="vid-card">
+        <video controls preload="none" poster="images/taller-004.png"><source src="animakids/media/video-animakids.mp4" type="video/mp4"></video>
+        <div class="vid-meta"><h4>“Plasticina en movimiento”</h4><span>Estudiante · 5° básico</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="wrap">
+    <div class="sec-head center"><span class="eyebrow brand"><i data-lucide="sparkles" style="width:14px"></i> El método</span><h2>Cómo funciona un taller</h2></div>
+    <div class="value-grid">
+      <div class="value-card"><div class="vic"><i data-lucide="lightbulb"></i></div><h3>1 · Idea</h3><p>Cada niño desarrolla su personaje y una micro-historia. No hay una forma correcta.</p></div>
+      <div class="value-card"><div class="vic"><i data-lucide="hand"></i></div><h3>2 · Manos</h3><p>Dibujo, plasticina, cut-out y stop motion sobre nuestros tableros LED.</p></div>
+      <div class="value-card"><div class="vic"><i data-lucide="clapperboard"></i></div><h3>3 · ¡Acción!</h3><p>Captura frame a frame con la app y estreno del corto en la sala.</p></div>
+    </div>
+    <div style="text-align:center;margin-top:44px"><button class="cta-brutal" style="display:inline-flex;width:auto;padding:22px 40px" data-hover onclick="openModal('workshopModal')"><i data-lucide="party-popper"></i> ¡Quiero el taller en mi sala!</button></div>
+  </div>
+</section>
+
+<script src="js/bq-v5.js"></script>
+</body>
+</html>
