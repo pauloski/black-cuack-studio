@@ -1,4 +1,4 @@
-/* Validación de los datos de despacho (envío "Por Pagar": Starken / Chilexpress).
+/* Validación de los datos de despacho (envío a domicilio con Chilexpress).
 
    Esta es la validación que MANDA. La del navegador es solo cortesía para el
    usuario: cualquiera puede saltársela con un POST directo. */

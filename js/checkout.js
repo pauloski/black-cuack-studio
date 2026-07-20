@@ -14,6 +14,60 @@ window.BQ_COMUNAS_FALLBACK = [{"region":"Arica y Parinacota","comunas":["Arica",
   var MODAL = 'shipModal';
   var regionesCache = null;
 
+  /* Estado de la cotización de envío (Chilexpress, a domicilio). */
+  var productsAmount = 0;   // total de productos (parseado del carrito)
+  var shippingCost = null;  // costo de envío cotizado; null = aún no / sin cobertura
+  var shipServiceName = ''; // "EXPRESS", "PRIORITARIO", ...
+  var quoting = false;      // hay una cotización en curso
+
+  function clp(n) { return '$' + Number(n || 0).toLocaleString('es-CL'); }
+
+  function setFieldErr(name, msg) {
+    var el = document.querySelector('#shipForm .err[data-for="' + name + '"]');
+    if (!el) return;
+    el.textContent = msg || '';
+    var f = el.closest('.field');
+    if (f) f.classList.toggle('has-err', !!msg);
+  }
+
+  function renderSummary() {
+    var ship = document.getElementById('sumShip');
+    if (!ship) return;
+    document.getElementById('sumProducts').textContent = clp(productsAmount);
+    document.getElementById('sumShipLabel').textContent =
+      'Envío' + (shippingCost != null && shipServiceName ? ' · Chilexpress ' + shipServiceName : '');
+    ship.textContent = quoting ? 'Calculando…' : (shippingCost == null ? 'Elige tu comuna' : clp(shippingCost));
+    document.getElementById('sumTotal').textContent = clp(productsAmount + (shippingCost || 0));
+  }
+
+  /* Cotiza el envío a la comuna elegida y actualiza el resumen. El servidor
+     REVALIDA esto en /api/checkout: acá es solo para mostrarle el costo al cliente. */
+  async function requestQuote() {
+    var sel = document.getElementById('sfComuna');
+    var comuna = sel ? sel.value : '';
+    setFieldErr('comuna', '');
+    if (!comuna) { shippingCost = null; shipServiceName = ''; renderSummary(); return; }
+    quoting = true; shippingCost = null; shipServiceName = ''; renderSummary();
+    try {
+      var res = await fetch('/api/shipping/quote', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ comuna: comuna, items: cartItems() })
+      });
+      var data = await res.json().catch(function () { return null; });
+      quoting = false;
+      if (data && data.ok) {
+        shippingCost = data.costo; shipServiceName = data.servicio || '';
+      } else {
+        shippingCost = null; shipServiceName = '';
+        setFieldErr('comuna', (data && data.error) || 'No pudimos calcular el envío.');
+      }
+      renderSummary();
+    } catch (e) {
+      quoting = false; shippingCost = null; shipServiceName = ''; renderSummary();
+      setFieldErr('comuna', 'No pudimos calcular el envío. Reintenta.');
+    }
+  }
+
   /* ---------- utilidades de validación (espejo del servidor) ---------- */
 
   function cleanRut(rut) {
@@ -78,14 +132,14 @@ window.BQ_COMUNAS_FALLBACK = [{"region":"Arica y Parinacota","comunas":["Arica",
       '<div class="modal-bg" onclick="closeModal(\'' + MODAL + '\')"></div>' +
       '<div class="modal-card">' +
         '<div class="modal-top">' +
-          '<div><h3>Datos de despacho</h3><div class="sub">Envío por pagar · Starken o Chilexpress</div></div>' +
+          '<div><h3>Datos de despacho</h3><div class="sub">Despacho a domicilio · Chilexpress</div></div>' +
           '<button class="modal-close" data-hover onclick="closeModal(\'' + MODAL + '\')"><i data-lucide="x"></i></button>' +
         '</div>' +
         '<div class="modal-body">' +
           '<div class="ship-note">' +
             '<i data-lucide="truck"></i>' +
-            '<div><strong>El envío se paga al recibir.</strong> Ahora pagas solo los productos ' +
-            '(<span id="shipTotal">' + esc(total) + '</span>). El costo del despacho lo pagas al recibir el paquete (Starken o Chilexpress).</div>' +
+            '<div>El <strong>envío a domicilio</strong> se calcula con Chilexpress según tu comuna. ' +
+            'Elígela y verás el costo abajo antes de pagar.</div>' +
           '</div>' +
           '<form id="shipForm" novalidate>' +
             /* --- Orden UX: contacto primero, luego dirección (de lo amplio a lo específico) --- */
@@ -112,6 +166,14 @@ window.BQ_COMUNAS_FALLBACK = [{"region":"Arica y Parinacota","comunas":["Arica",
               '<input id="sfDir" name="direccion" type="text" autocomplete="street-address" placeholder="Av. Los Carrera 1234, depto 5B"><small class="err" data-for="direccion"></small></div>' +
             '<div class="field"><label for="sfRef">Referencia <span style="font-weight:400;opacity:.6">(opcional)</span></label>' +
               '<input id="sfRef" name="referencia" type="text" placeholder="Portón negro, entre calles X e Y"></div>' +
+            '<div class="ship-summary" id="shipSummary" style="margin:14px 0">' +
+              '<div class="ship-row" style="display:flex;justify-content:space-between;padding:4px 0">' +
+                '<span>Productos</span><span id="sumProducts">' + esc(clp(productsAmount)) + '</span></div>' +
+              '<div class="ship-row" style="display:flex;justify-content:space-between;padding:4px 0">' +
+                '<span id="sumShipLabel">Envío</span><span id="sumShip">Elige tu comuna</span></div>' +
+              '<div class="ship-row ship-total" style="display:flex;justify-content:space-between;padding:8px 0;margin-top:4px;border-top:1px solid currentColor;font-weight:700">' +
+                '<span>Total</span><span id="sumTotal">' + esc(clp(productsAmount)) + '</span></div>' +
+            '</div>' +
             '<small class="err" data-for="_form" style="display:block;margin-bottom:10px"></small>' +
             '<button type="submit" class="cta-brutal" id="sfSubmit" data-hover style="margin-top:4px">' +
               '<i data-lucide="credit-card"></i> Ir a pagar con Flow</button>' +
@@ -203,6 +265,13 @@ window.BQ_COMUNAS_FALLBACK = [{"region":"Arica y Parinacota","comunas":["Arica",
     if (Object.keys(errs).length) return showErrors(errs);
     showErrors({});
 
+    // El envío debe estar cotizado antes de pagar (así el total mostrado es real).
+    if (quoting) { setFieldErr('_form', 'Estamos calculando el envío, espera un segundo…'); return; }
+    if (shippingCost == null) {
+      setFieldErr('comuna', 'Elige una comuna con cobertura para calcular el envío.');
+      return;
+    }
+
     var btn = document.getElementById('sfSubmit');
     var original = btn.innerHTML;
     btn.disabled = true;
@@ -252,6 +321,8 @@ window.BQ_COMUNAS_FALLBACK = [{"region":"Arica y Parinacota","comunas":["Arica",
     if (!Object.keys(cart).length) return;
 
     var total = document.getElementById('total');
+    productsAmount = parseInt(String(total ? total.textContent : '').replace(/[^\d]/g, ''), 10) || 0;
+    shippingCost = null; shipServiceName = ''; quoting = false;
     var old = document.getElementById(MODAL);
     if (old) old.remove();
     document.body.insertAdjacentHTML('beforeend', modalHTML(total ? total.textContent : ''));
@@ -273,6 +344,11 @@ window.BQ_COMUNAS_FALLBACK = [{"region":"Arica y Parinacota","comunas":["Arica",
       var box = document.querySelector('#shipForm .err[data-for="_form"]');
       if (box) box.textContent = 'No pudimos cargar las comunas. Recarga la página.';
     }
+
+    // Al elegir comuna, cotizamos el envío con Chilexpress y actualizamos el total.
+    var comunaSel = document.getElementById('sfComuna');
+    if (comunaSel) comunaSel.addEventListener('change', requestQuote);
+    renderSummary();
 
     if (window.lucide) lucide.createIcons();
   }

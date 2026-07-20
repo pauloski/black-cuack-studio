@@ -15,13 +15,14 @@
 |---|---|---|
 | Cuenta comercial Chilexpress | **Hay que abrirla** (en trámite) | La fase con API real (OT/etiqueta/tracking) espera al TCC; el MVP NO la necesita. |
 | Granularidad de peso | **Un peso por producto** | Campo único `peso_gramos` en Contentful + caja por defecto; no por variante. |
-| Alcance del MVP | **Domicilio + sucursal juntos** | Ambas modalidades desde el inicio. |
-| **Cómo se cotiza en el MVP** | **Tabla de tarifas propia (SIN API)** | El MVP usa una tabla por zona × modalidad que define BlackQuack; la API en vivo llega después SIN rehacer el checkout. |
+| **Cómo se cotiza (Fase 1)** | **API Cotizador en vivo (SIN cuenta comercial)** | Ya suscritos al Cotizador; se cotiza a domicilio en tiempo real. Tabla estática queda solo como **fallback** si la API falla. |
+| Servicio a cobrar | **El más barato** que devuelva la API | Se toma la opción de menor `serviceValue` de `courierServiceOptions`. |
+| Sucursal | **Diferida a la fase con cuenta comercial** | El Cotizador NO da precio separado de retiro en sucursal (eso se define al crear la OT). Fase 1 = solo domicilio. |
 
-**Principio de diseño clave:** "cotizar" es una **cajita negra** `(comuna, modalidad, peso) → costo`.
-En el MVP mira una tabla estática; más adelante llama a la API de Chilexpress. Todo el resto del
-checkout (selector, línea de envío, desglose, suma a Flow) es idéntico en ambos casos → el MVP
-**no es trabajo desechable**, es el andamiaje sobre el que se enchufa la API.
+**Principio de diseño clave:** "cotizar" es una **cajita negra** `(comuna, peso) → costo`.
+En Fase 1 llama a la API del Cotizador y toma la opción más barata; si la API falla, cae a una
+tabla estática (fallback). Todo el resto del checkout (línea de envío, desglose, suma a Flow) no
+depende de la fuente del precio → cambiar/ampliar la cotización no toca el checkout.
 
 ---
 
@@ -53,10 +54,16 @@ Cobertura, Envíos → 3 suscripciones, 3 keys).
 |---|---|---|---|
 | Cotizar envío | POST | `/rating/api/v1.0/rates/courier` | Confirmado |
 | Regiones | GET | `/georeference/api/v1.0/regions` | Confirmado |
-| Comunas + `countyCode` | GET | `/georeference/api/v1.0/coverage-areas?RegionCode={cod}&type=0` | Confirmado |
-| Oficinas de entrega (sucursales) | GET | bajo `/georeference/api/v1.0/...` (path exacto **por confirmar en portal**) | Por confirmar |
+| Comunas + `countyCode` | GET | `/georeference/api/v1.0/coverage-areas?RegionCode={cod}&type=1` | Confirmado (`type`: 0=todas·1=comunas·2=sectores) |
+| Oficinas de entrega (sucursales) | GET | `/georeference/api/v1.0/offices?Type={t}&RegionCode={r}&CountyName={c}` | Confirmado (`Type`: 0=todo·1=sucursales·4=Pick Up) |
+| Oficinas cercanas | GET | `/georeference/api/v1.0/nearby-offices/{addressId}?Type=&radius=` | Confirmado |
+| Georreferenciar dirección | POST | `/georeference/api/v1.0/addresses/georeference` | Confirmado (→ addressId, lat, lng) |
 | Crear OT | POST | `/transport-orders/api/v1.0/transport-orders` | Confirmado (host) |
 | Tracking | GET | bajo `/transport-orders/api/v1.0/...` (path exacto **por confirmar**) | Por confirmar |
+
+**Coberturas — respuestas confirmadas:** `regions[]` = `{ regionId:"R1", regionName, ineRegionCode }`;
+`coverageAreas[]` = `{ countyCode:"BULN", countyName:"BULNES", regionCode, ineCountyCode, coverageName }`;
+`offices[]` = `{ officeName, countyName, streetName, streetNumber, address, officeCode, ... }` (para Fase 2).
 
 **Cotizador — request confirmado:**
 ```json
@@ -71,8 +78,24 @@ Cobertura, Envíos → 3 suscripciones, 3 keys).
 }
 ```
 - `originCountyCode`/`destinationCountyCode`: código de cobertura de 4 letras (de API Cobertura).
-- Respuesta: opciones en `data.courierServiceOptions[]` (una por servicio disponible).
-- Códigos de servicio: `3`=CHEX (Express) · `4`=XTEN (Extendido) · `5`=XTRE (Extremos).
+- `deliveryTime`: `0`=todos · `1`=prioritarios · `2`=no prioritarios · `3`=devolución.
+- `productType`: `1`=Documento · `3`=Encomienda.
+
+**Respuesta 200 confirmada en el portal:**
+```json
+{
+  "data": { "courierServiceOptions": [
+    { "serviceTypeCode": 2, "serviceDescription": "PRIORITARIO", "didUseVolumetricWeight": false,
+      "finalWeight": "16.00", "serviceValue": "9306", "conditions": "", "deliveryType": 0, "additionalServices": [] },
+    { "serviceTypeCode": 3, "serviceDescription": "EXPRESS", "serviceValue": "6204", "finalWeight": "16.00", ... }
+  ] },
+  "statusCode": 0, "statusDescription": "OK", "errors": null
+}
+```
+- `serviceValue` = costo del envío en CLP (string). Fase 1 toma el **menor**.
+- `serviceTypeCode`: `2`=PRIORITARIO (PREX) · `3`=EXPRESS (CHEX) · `4`=EXTENDIDO (XTEN) · `5`=EXTREMOS (XTRE) · `41`/`42`=Enc. grandes.
+- `didUseVolumetricWeight`/`finalWeight`: Chilexpress calcula el peso volumétrico y cobra por el mayor; nosotros solo enviamos peso + dimensiones reales.
+- Implementado en `functions/_lib/chilexpress.js` (`quoteShipping()`).
 - **Domicilio vs sucursal NO se distingue en el cotizador.** Se define al crear la OT
   con `deliveryOnCommercialOffice` (`true`=oficina/sucursal, `false`=domicilio) +
   `commercialOfficeId` (código de oficina, de "Oficinas de entrega").
@@ -167,33 +190,22 @@ pagado ──▶ en_preparacion ──▶ despachado ──▶ en_transito ─�
 
 ## 7. Plan por fases
 
-- **Fase 1 — MVP con tabla de tarifas (SIN API Chilexpress).** No requiere keys ni cuenta comercial.
-  - `peso_gramos` en Contentful (para armar la tabla y a futuro; el cálculo MVP es por zona).
-  - `_lib/shipping-rates.js`: tabla zona × modalidad (domicilio/sucursal) editable por BlackQuack.
-    Mapa comuna/región → zona (RM / centrales / extremas).
-  - `POST /api/shipping/quote`: cajita negra `(comuna, modalidad) → costo` mirando la tabla.
-  - Modal: selector domicilio/sucursal + costo mostrado; recotización server-side en `/api/checkout`;
-    envío sumado al `amount` de Flow; desglose (`amount_products`/`amount_shipping`) en KV.
-  - Sucursal en MVP: se cobra la tarifa de sucursal y la oficina puntual se coordina a mano
-    (o selector simple de comuna); el listado de oficinas vía API es de la fase con API.
-  - Tracking MVP: en admin, marcar "despachado" + pegar a mano el N° de seguimiento Chilexpress →
-    el cliente ve link al tracking público. Estados de fulfillment (§6) funcionan igual, manuales.
-
-  Ejemplo de tabla (valores a definir por BlackQuack cotizando en chilexpress.cl):
-  | Zona | Domicilio | Sucursal |
-  |---|---|---|
-  | RM | $3.500 | $2.900 |
-  | Regiones centrales | $4.900 | $3.900 |
-  | Regiones extremas | $7.900 | $5.900 |
-
-- **Fase 2 — Habilitación de la API.** Registro en portal developers, suscripción a las 3 APIs,
-  keys QA. Bajar y cachear comuna→`countyCode`. Confirmar en "Try it" los datos pendientes (§3).
-  *En paralelo (no técnico): iniciar cuenta comercial + TCC.*
-- **Fase 3 — Cotización en vivo.** Reemplazar la tabla por `_lib/chilexpress.js` dentro de la MISMA
-  cajita negra `quote()`: cotización real domicilio/sucursal + `GET /api/shipping/offices` (selector
-  de oficina). El resto del checkout no cambia.
-- **Fase 4 — Envío real + tracking automático (requiere TCC).** Crear OT desde admin, guardar N°
-  seguimiento y etiqueta PDF, sincronización de estados desde el tracking de Chilexpress.
+- **Fase 1 — Cotización a domicilio EN VIVO (API Cotizador).** No requiere cuenta comercial.
+  - Suscripción a **Cotizador** (hecha) y a **Cobertura** (pendiente) en el portal developers → 2 keys.
+  - `functions/_lib/chilexpress.js` (hecho): `quoteShipping()` llama al Cotizador y toma el servicio más barato.
+  - `functions/_lib/chilexpress-coverage.js`: mapa **comuna canónica → countyCode** (4 letras), generado
+    una vez desde la API Cobertura con `scripts/fetch-chilexpress-coverage.mjs`. `ORIGIN_COUNTY_CODE` = comuna de despacho.
+  - `peso_gramos` en Contentful por producto (obligatorio para cotizar) + caja por defecto (`DEFAULT_BOX`).
+  - `POST /api/shipping/quote`: `(comuna, items) → { costo, servicio }`. Suma pesos, mapea comuna→código, cotiza.
+  - Modal: costo de envío mostrado; recotización server-side en `/api/checkout`; envío sumado al `amount`
+    de Flow; desglose (`amount_products`/`amount_shipping`) en KV.
+  - Fallback: si el Cotizador falla, tarifa plana de respaldo (para no romper el checkout).
+  - Tracking MVP: en admin, marcar "despachado" + pegar a mano el N° de seguimiento → link al tracking
+    público. Estados de fulfillment (§6) manuales.
+- **Fase 2 — Sucursal + envío real + tracking automático (requiere cuenta comercial + TCC).**
+  Precio real de retiro en sucursal (`deliveryOnCommercialOffice` al crear la OT) + `GET /api/shipping/offices`
+  (selector de oficina), crear OT desde admin, etiqueta PDF, y sincronización de estados desde el tracking
+  de Chilexpress. *En paralelo (no técnico): iniciar cuenta comercial + TCC.*
 
 ---
 

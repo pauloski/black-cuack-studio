@@ -59,6 +59,12 @@ export async function getCatalog(env, opts = {}) {
       product_title: f.product_title || '',
       price,
       stock: f.stock != null ? Number(f.stock) : null, // fallback simple
+      // Peso y dimensiones para cotizar el envío con Chilexpress. Si faltan,
+      // shipping-quote usa un peso y una caja por defecto.
+      peso_gramos: f.peso_gramos != null ? Number(f.peso_gramos) : null,
+      alto_cm: f.alto_cm != null ? Number(f.alto_cm) : null,
+      ancho_cm: f.ancho_cm != null ? Number(f.ancho_cm) : null,
+      largo_cm: f.largo_cm != null ? Number(f.largo_cm) : null,
       variants
     });
   }

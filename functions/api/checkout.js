@@ -8,6 +8,7 @@ import { flowPost, json } from '../_lib/flow.js';
 import { getCatalog, priceCart, buildSubject, seedUnits } from '../_lib/catalog.js';
 import { validateShipping } from '../_lib/shipping.js';
 import { reserveCart, releaseCart, lazySeed } from '../_lib/stock.js';
+import { computeShipping, FALLBACK_SHIPPING } from '../_lib/shipping-quote.js';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
@@ -94,13 +95,40 @@ export async function onRequest(context) {
     return json({ error: 'Se agotó el stock de ' + name + ' mientras comprabas.', soldOut: reserved.failed }, 409);
   }
 
-  /* El envío es "Por Pagar" (Starken o Chilexpress): el despacho lo paga el cliente
-     al recibir, así que el amount cobrado por Flow es solo el de los productos. */
+  /* Cotiza el envío A DOMICILIO con Chilexpress SERVER-SIDE: el costo que muestre
+     el navegador nunca se confía (mismo principio que el precio de los productos).
+     - Sin cobertura → no se cobra: se libera la reserva y se avisa.
+     - Chilexpress caído → tarifa de respaldo para no perder la venta (se registra). */
+  let shipCost, shipService;
+  try {
+    const s = await computeShipping(env, catalog, ship.shipping.comuna, priced.lines, priced.amount);
+    if (!s.ok && s.noCoverage) {
+      await releaseCart(env.ORDERS_DB, priced.lines, commerceOrder).catch(() => {});
+      return json({ error: s.error, fields: { comuna: 'Chilexpress no despacha a esta comuna.' } }, 409);
+    }
+    if (!s.ok) {
+      console.warn('[checkout] cotización de envío falló, usando respaldo:', s.error, JSON.stringify(s.errors || ''));
+      shipCost = FALLBACK_SHIPPING;
+      shipService = 'Chilexpress';
+    } else {
+      shipCost = s.costo;
+      shipService = s.servicio;
+    }
+  } catch (e) {
+    console.warn('[checkout] cotización de envío con excepción, usando respaldo:', e.message);
+    shipCost = FALLBACK_SHIPPING;
+    shipService = 'Chilexpress';
+  }
+
+  const amountProducts = priced.amount;
+  const amountTotal = amountProducts + shipCost;
+
+  /* Flow cobra el total = productos + envío a domicilio (Chilexpress). */
   const params = {
     commerceOrder,
     subject: buildSubject(priced.lines),
     currency: 'CLP',
-    amount: priced.amount,
+    amount: amountTotal,
     email,
     /* Ventana de pago: pasado esto, Flow no cobra la orden. Hace determinista el
        abandono para el sweeper, que libera la reserva pasada esta ventana. */
@@ -112,7 +140,7 @@ export async function onRequest(context) {
        quedan en nuestro KV, asociados al commerceOrder. */
     optional: JSON.stringify({
       items: priced.lines.map((l) => l.id + 'x' + l.qty).join(','),
-      envio: 'Por pagar · Starken/Chilexpress',
+      envio: 'Domicilio · Chilexpress ' + shipService + ' $' + shipCost,
       comuna: ship.shipping.comuna
     })
   };
@@ -143,10 +171,13 @@ export async function onRequest(context) {
         commerceOrder,
         flowOrder: created.flowOrder ?? null,
         email,
-        amount: priced.amount,
+        // Desglose: productos + envío = total cobrado por Flow.
+        amount: amountTotal,
+        amount_products: amountProducts,
+        amount_shipping: shipCost,
         lines: priced.lines,
         // Datos ya normalizados por validateShipping (RUT con formato, comuna canónica).
-        shipping: { ...ship.shipping, courier: 'Starken / Chilexpress', modalidad: 'Por Pagar' },
+        shipping: { ...ship.shipping, courier: 'Chilexpress', metodo: 'domicilio', modalidad: 'Despacho a domicilio', costo: shipCost, servicio: shipService },
         status: 'pending',
         // 'reserved' → el stock ya se descontó. confirm lo pasa a committed/released.
         stock_state: 'reserved',
