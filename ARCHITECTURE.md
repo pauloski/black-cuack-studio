@@ -4,8 +4,9 @@
 > Describe el stack, la arquitectura, los flujos y las decisiones de diseño del
 > ecommerce JAMstack de BlackQuack.
 
-**Estado:** POC funcional, en despliegue a producción (Cloudflare Pages).
-**Última actualización:** julio 2026.
+**Estado:** en producción (Cloudflare Pages), validado con venta real de punta a
+punta. Barrido de reservas automatizado (Worker cron) y checkout con rate limiting.
+**Última actualización:** 20 julio 2026.
 
 ---
 
@@ -75,7 +76,16 @@ flowchart TD
   S2 & S3 & S4 -->|firma HMAC| FLOW[(Flow API)]
   FLOW -->|webhook POST| S3
   FLOW -->|redirect POST| S4
+
+  CRON[["Worker blackquack-cron<br/>Cron Trigger */20 min"]] -->|barrido programado| D1
+  CRON --> KV
+  CRON -->|getStatus| FLOW
+  WAF{{"WAF Rate Limiting<br/>10 req/10s por IP"}} -.->|filtra en el edge| S2
 ```
+
+El **barrido de reservas** ya no vive en Pages Functions: corre en un Worker
+independiente con Cron Trigger (`worker-cron/`, ver §8). El `POST /api/checkout`
+está protegido por una regla WAF de rate limiting que corta antes de la Function.
 
 **Principio clave:** el navegador nunca calcula precios ni ve el `secretKey` de
 Flow. El precio se **recalcula en el servidor** contra Contentful, y la firma
@@ -101,6 +111,7 @@ qty}` + datos de despacho.
 │   │   ├── flow.js      # firma HMAC, flowPost/flowGet, flowBase (sandbox/prod)
 │   │   ├── catalog.js   # getCatalog() desde Contentful, priceCart(), buildSubject()
 │   │   ├── stock.js     # D1: variantKey, lazySeed, reserve/release/commit, resync
+│   │   ├── sweep-core.js # lógica del barrido de reservas (la usan /api/admin/sweep y el Worker cron)
 │   │   ├── shipping.js  # validación RUT (mód. 11), teléfono, comuna
 │   │   └── comunas.js   # 16 regiones · 346 comunas (fuente de verdad server)
 │   └── api/
@@ -111,10 +122,16 @@ qty}` + datos de despacho.
 │       ├── flow/return.js    # POST /api/flow/return   (aterrizaje del navegador)
 │       └── admin/
 │           ├── resync-stock.js # POST /api/admin/resync-stock  (reabastecer D1 desde Contentful)
-│           └── sweep.js        # POST /api/admin/sweep         (liberar reservas abandonadas)
+│           └── sweep.js        # POST /api/admin/sweep         (disparo manual del barrido)
+├── worker-cron/         # Worker aparte con Cron Trigger (barrido automático cada 20 min)
+│   ├── src/index.js     # scheduled() → sweep-core sobre los mismos D1/KV
+│   ├── wrangler.toml    # crons, bindings D1/KV por ID, observability
+│   └── README.md        # deploy y operación del Worker
+├── scripts/
+│   └── setup-ratelimit.sh # crea/actualiza (idempotente) la regla WAF de rate limiting
 ├── schema.sql           # DDL de D1 (tablas stock, stock_ledger)
 ├── seed.sql             # siembra de ejemplo (opcional; el lazy-seed la reemplaza)
-├── wrangler.toml        # binding D1 para local/CLI (producción se ata en el panel)
+├── wrangler.toml        # binding D1 para local/CLI (producción se ata en el panel; gitignored en la raíz)
 ├── .dev.vars            # secretos LOCALES (gitignored) — SIEMPRE sandbox
 ├── .dev.vars.example    # plantilla versionada (sin valores)
 └── .gitignore
@@ -300,14 +317,15 @@ reserved --(rechazo/anulación/abandono)--> released
 | **Contentful CDA token** | Es de **solo lectura** y público por diseño (viaja al navegador). No es un secreto. |
 | **Sobreventa** | Imposible por el `UPDATE ... WHERE qty>=n` atómico de D1. |
 | **`FLOW_SANDBOX`** | Obligatoria (`"0"`/`"1"`); si falta, el checkout se **bloquea** en vez de asumir producción. |
-| **Endpoints admin** | Protegidos por `ADMIN_RESYNC_SECRET` (header `x-admin-secret` o `?secret=`), comparación de tiempo constante. Nivel "sprint" — GET con secreto en URL puede filtrarse en logs. |
+| **Endpoints admin** | Protegidos por `ADMIN_RESYNC_SECRET`, **solo** por header `x-admin-secret` (se quitó el `?secret=` de la URL para no filtrarlo en logs), comparación de tiempo constante. |
+| **Rate limiting checkout** | Regla WAF (`http_ratelimit`) sobre `POST /api/checkout`: 10 req/10 s por IP → **block** 10 s. Corta en el edge antes de ejecutar la Function/tocar Flow/D1. Se aplica con `scripts/setup-ratelimit.sh`. |
 | **Datos personales** | RUT/dirección/teléfono se guardan en KV, **no** se envían a Flow (Flow solo recibe items + comuna). |
 
 **Puntos de auditoría / mejoras pendientes:**
 1. El `secretKey` de producción estuvo brevemente en `.dev.vars.example` y en el
    historial de chat durante el desarrollo → **rotarlo** en el panel de Flow.
-2. `ADMIN_RESYNC_SECRET` es autenticación básica; para más robustez, mover a
-   header-only y/o firmar las requests.
+2. `ADMIN_RESYNC_SECRET` es autenticación básica; ya se movió a **header-only**
+   (sin secreto en la URL). Para más robustez, firmar las requests.
 3. El `.dev.vars` local debe permanecer SIEMPRE en sandbox (regla operativa).
 
 ---
@@ -323,9 +341,30 @@ Protegidas por `ADMIN_RESYNC_SECRET`:
   cuando no haya pagos a medio camino.
 - **`/api/admin/sweep`** — libera reservas **abandonadas**: recorre las órdenes
   `reserved` vencidas, consulta Flow (`getStatus`) y libera solo las **no
-  pagadas** (si Flow dice pagada, hace `commit` como red de seguridad). Cloudflare
-  Pages **no tiene cron** → se dispara con un cron externo (cron-job.org / GitHub
-  Actions) haciendo POST cada 15-30 min, o a mano desde `admin.html`.
+  pagadas** (si Flow dice pagada, hace `commit` como red de seguridad). Comparte
+  la lógica con el Worker cron vía `functions/_lib/sweep-core.js` (sin duplicar).
+  Este endpoint queda como **disparo manual** ("forzar ahora") desde `admin.html`.
+
+### 8.1 Barrido automático — Worker `blackquack-cron` (`worker-cron/`)
+
+Cloudflare Pages **no tiene cron nativo**, así que el barrido corre en un **Worker
+independiente** con Cron Trigger `*/20 * * * *` (cada 20 min, en UTC). Se
+despliega y versiona aparte de Pages y **no** afecta el build del sitio:
+
+```bash
+cd worker-cron
+npx wrangler deploy
+npx wrangler secret put FLOW_API_KEY      # mismas llaves de producción que Pages
+npx wrangler secret put FLOW_SECRET_KEY
+```
+
+- **Comparte los datos con Pages:** los bindings `ORDERS_DB` (D1 `blackquack-stock`)
+  y `ORDERS_KV` apuntan por ID a los mismos recursos. `FLOW_SANDBOX="0"` va como
+  var en `wrangler.toml`; los secretos NO (se cargan con `wrangler secret put`).
+- **Sin URL expuesta:** reemplaza al cron externo; todo queda dentro de Cloudflare.
+- **Observability activada** (`observability.logs` en `wrangler.toml`): los
+  `console.log('[cron-sweep]', ...)` se persisten en el dashboard (pestaña
+  Observability del Worker), sin necesidad de `wrangler tail`.
 
 ---
 
@@ -385,13 +424,19 @@ el formulario usa un **fallback embebido de comunas** en `checkout.js` cuando
 
 1. **Restock:** editar stock en Contentful no se refleja tras el primer seed →
    usar `/api/admin/resync-stock`.
-2. **Sweeper:** requiere un cron externo (Pages no tiene cron nativo).
-3. **Productos simples sin `stock` global** en Contentful → aparecen en 0
+2. **Sweeper:** ~~requiere un cron externo~~ **resuelto** con el Worker
+   `blackquack-cron` (§8.1). Ojo: se despliega **aparte** de Pages — un cambio en
+   `worker-cron/` no se publica con el push a `main`; hay que `wrangler deploy`.
+3. **Rate limiting:** el **plan gratuito** de Cloudflare solo permite `period=10`
+   (no 60) y **exige** `cf.colo.id` junto a `ip.src` en las characteristics. Por
+   eso la regla es 10 req/10 s (no 10/min). `setup-ratelimit.sh` ya usa estos
+   valores; si algún día se sube de plan, se puede ampliar la ventana.
+4. **Productos simples sin `stock` global** en Contentful → aparecen en 0
    (no comprables) hasta que se les asigne stock.
-4. **Rich Text** depende de esm.sh en runtime (degradación elegante si falla).
-5. **Comunas embebidas** en `checkout.js` son un fallback: mantener sincronizado
+5. **Rich Text** depende de esm.sh en runtime (degradación elegante si falla).
+6. **Comunas embebidas** en `checkout.js` son un fallback: mantener sincronizado
    con `functions/_lib/comunas.js` si cambia.
-6. El **webhook `confirm`** solo se prueba de verdad desplegado (Flow no alcanza
+7. El **webhook `confirm`** solo se prueba de verdad desplegado (Flow no alcanza
    `localhost`).
 
 ---
