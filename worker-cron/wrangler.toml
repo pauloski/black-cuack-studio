@@ -1,0 +1,33 @@
+# BlackQuack — Worker compañero con Cron Trigger para el barrido de reservas.
+# Se despliega POR SEPARADO de Pages:  cd worker-cron && npx wrangler deploy
+# NO afecta el build de Pages (Pages solo detecta el wrangler.toml de la raíz,
+# que está gitignorado, y la carpeta functions/).
+
+name = "blackquack-cron"
+main = "src/index.js"
+compatibility_date = "2026-07-01"
+
+# Cada 20 min (dentro de los 15-30 recomendados). Los crons van en UTC.
+[triggers]
+crons = ["*/20 * * * *"]
+
+# MISMOS recursos que usa Pages: comparten los datos de stock y órdenes.
+# (Estos IDs no son secretos; identifican recursos, no dan acceso sin tu cuenta.)
+[[d1_databases]]
+binding = "ORDERS_DB"
+database_name = "blackquack-stock"
+database_id = "5aee6c63-61c5-470a-9aec-3a10bfd0b494"
+
+[[kv_namespaces]]
+binding = "ORDERS_KV"
+id = "1e749adb6ecf4749b666f0452c03c2e4"
+
+# Entorno de Flow: "0" = producción (mismo criterio que Pages). Var, no secreto.
+[vars]
+FLOW_SANDBOX = "0"
+
+# Los SECRETOS de Flow NO van aquí. Cárgalos una vez tras el primer deploy:
+#   cd worker-cron
+#   npx wrangler secret put FLOW_API_KEY
+#   npx wrangler secret put FLOW_SECRET_KEY
+# (usa las MISMAS llaves de producción que pusiste en Pages)

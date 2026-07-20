@@ -9,8 +9,10 @@ node_modules/
 
 .DS_Store
 
-# wrangler.toml es solo para 'wrangler pages dev' local; en producción manda el panel
-wrangler.toml
+# wrangler.toml de la RAÍZ es solo para 'wrangler pages dev' local; en producción
+# manda el panel. Se ancla a la raíz (/) para NO ignorar worker-cron/wrangler.toml,
+# que sí se versiona (no lleva secretos, solo IDs de recursos).
+/wrangler.toml
 
 # imágenes fuente pesadas y sin uso (el sitio usa el CDN de Contentful)
 images/product/

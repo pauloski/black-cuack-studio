@@ -221,13 +221,20 @@ window.BQ_COMUNAS_FALLBACK = [{"region":"Arica y Parinacota","comunas":["Arica",
           }
         })
       });
-      var data = await res.json();
+      /* La respuesta puede NO ser JSON: ante un 5xx, Cloudflare reemplaza el
+         cuerpo por su propia página de error HTML. Parseamos a prueba de fallos
+         para nunca mostrarle al cliente un "Unexpected token '<'". */
+      var data = await res.json().catch(function () { return null; });
 
-      if (!res.ok || !data.redirect) {
+      if (!res.ok || !data || !data.redirect) {
         /* El servidor puede rechazar campos que el cliente dejó pasar
            (comuna inexistente, stock que se acabó recién). Los mostramos ahí mismo. */
-        if (data.fields) showErrors(data.fields);
-        throw new Error(data.error || 'No pudimos iniciar el pago.');
+        if (data && data.fields) showErrors(data.fields);
+        var msg = (data && data.error)
+          || (res.status >= 500
+                ? 'No pudimos iniciar el pago en este momento. Intenta nuevamente en unos segundos.'
+                : 'No pudimos iniciar el pago.');
+        throw new Error(msg);
       }
 
       // El carrito se vacía solo en gracias.html con status=paid.

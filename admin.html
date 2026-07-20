@@ -59,8 +59,9 @@
   </div>
 
   <p class="admin-sub" style="font-size:.82rem">
-    También puedes llamarlo directo:
-    <code>/api/admin/resync-stock?secret=TU_SECRETO</code> (agrega <code>&amp;product=BQ-002</code> para uno solo).
+    El botón envía el secreto en una cabecera (<code>x-admin-secret</code>), nunca en la URL:
+    así no queda en el historial del navegador, los logs del servidor ni en la cabecera <code>Referer</code>.
+    Deja <em>Producto</em> vacío para sincronizar todo, o escribe un id (ej. <code>BQ-002</code>) para uno solo.
   </p>
 
   <h1 style="margin-top:40px">Liberar reservas abandonadas</h1>
@@ -86,8 +87,10 @@
   </div>
 
   <p class="admin-sub" style="font-size:.82rem">
-    Directo: <code>/api/admin/sweep?secret=TU_SECRETO&amp;olderThan=60</code> (agrega <code>&amp;dryRun=1</code> para simular).
-    Para automatizarlo, agenda un cron externo que haga POST a esta URL cada 15-30 min.
+    El barrido también corre <strong>solo</strong>: un Worker de Cloudflare con Cron Trigger
+    (carpeta <code>worker-cron/</code>) lo ejecuta cada 20 min directo sobre D1/KV, sin exponer
+    ninguna URL ni secreto. Este botón es solo para correrlo a mano; el secreto viaja en una
+    cabecera, nunca en la URL.
   </p>
 </div>
 
