@@ -31,20 +31,22 @@ if [ -z "${CF_API_TOKEN:-}" ]; then
 fi
 
 # --- La regla deseada ---------------------------------------------------------
-# 10 req/min por IP sobre POST /api/checkout → Block por 60 s al excederse.
+# 10 req / 10 s por IP sobre POST /api/checkout → Block por 10 s al excederse.
+# El plan gratuito de Cloudflare solo permite period=10 (no 60), y exige que
+# 'cf.colo.id' acompañe a 'ip.src' (el conteo se procesa a nivel de datacenter).
 # Acción 'block' (no challenge): /api/checkout se llama por fetch(), que no puede
 # resolver un challenge; un managed_challenge rompería también a los legítimos.
-DESC="BQ · throttle POST /api/checkout por IP"
+DESC="BQ throttle checkout"
 read -r -d '' DESIRED_RULE <<'JSON' || true
 {
-  "description": "BQ · throttle POST /api/checkout por IP",
+  "description": "BQ throttle checkout",
   "expression": "(http.request.uri.path eq \"/api/checkout\" and http.request.method eq \"POST\")",
   "action": "block",
   "ratelimit": {
     "characteristics": ["ip.src", "cf.colo.id"],
-    "period": 60,
+    "period": 10,
     "requests_per_period": 10,
-    "mitigation_timeout": 60
+    "mitigation_timeout": 10
   }
 }
 JSON

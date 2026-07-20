@@ -26,6 +26,13 @@ id = "1e749adb6ecf4749b666f0452c03c2e4"
 [vars]
 FLOW_SANDBOX = "0"
 
+# Logs persistidos en el dashboard (pestaña Observability). Así los [cron-sweep]
+# quedan guardados y se revisan sin tener 'wrangler tail' abierto. Debe coincidir
+# con lo activado en el panel para que un futuro deploy no lo apague.
+[observability.logs]
+enabled = true
+invocation_logs = true
+
 # Los SECRETOS de Flow NO van aquí. Cárgalos una vez tras el primer deploy:
 #   cd worker-cron
 #   npx wrangler secret put FLOW_API_KEY
