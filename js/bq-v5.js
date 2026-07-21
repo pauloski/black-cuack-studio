@@ -346,7 +346,7 @@ function cartHTML(){
       <div class="row"><span>Subtotal</span><span id="subtotal">$0</span></div>
       <div class="row" style="color:#666"><span>Envío</span><span>Se calcula al pagar</span></div>
       <div class="row total"><span>Total</span><span id="total">$0</span></div>
-      <button class="btn lg" data-hover onclick="checkout()"><i data-lucide="credit-card"></i> Finalizar compra</button>
+      <button class="btn lg" data-hover onclick="location.href='checkout.html'"><i data-lucide="credit-card"></i> Finalizar compra</button>
     </div>
   </aside>`;
 }

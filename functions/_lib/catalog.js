@@ -7,6 +7,13 @@
 
 import { variantKey } from './stock.js';
 
+// Número válido (> vacío/no numérico → null). Para campos opcionales de Contentful.
+function numOrNull(v) {
+  if (v == null || v === '') return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
 export async function getCatalog(env, opts = {}) {
   const space = env.CONTENTFUL_SPACE_ID;
   const token = env.CONTENTFUL_ACCESS_TOKEN;
@@ -59,12 +66,13 @@ export async function getCatalog(env, opts = {}) {
       product_title: f.product_title || '',
       price,
       stock: f.stock != null ? Number(f.stock) : null, // fallback simple
-      // Peso y dimensiones para cotizar el envío con Chilexpress. Si faltan,
-      // shipping-quote usa un peso y una caja por defecto.
-      peso_gramos: f.peso_gramos != null ? Number(f.peso_gramos) : null,
-      alto_cm: f.alto_cm != null ? Number(f.alto_cm) : null,
-      ancho_cm: f.ancho_cm != null ? Number(f.ancho_cm) : null,
-      largo_cm: f.largo_cm != null ? Number(f.largo_cm) : null,
+      // Peso y dimensiones para cotizar el envío con Chilexpress. Acepta el ID de
+      // Contentful con o sin sufijo de unidad (peso_gramos|peso, alto_cm|alto, ...).
+      // Si faltan, shipping-quote usa un peso y una caja por defecto.
+      peso_gramos: numOrNull(f.peso_gramos != null ? f.peso_gramos : f.peso),
+      alto_cm: numOrNull(f.alto_cm != null ? f.alto_cm : f.alto),
+      ancho_cm: numOrNull(f.ancho_cm != null ? f.ancho_cm : f.ancho),
+      largo_cm: numOrNull(f.largo_cm != null ? f.largo_cm : f.largo),
       variants
     });
   }

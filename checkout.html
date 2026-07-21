@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pago — BlackQuack</title>
+<meta name="description" content="Finaliza tu compra en BlackQuack de forma rápida y segura.">
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Archivo+Black&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<link rel="stylesheet" href="css/bq-v5.css">
+<style>
+/* ============================================================
+   CHECKOUT — página de pago con stepper. Estilos scoped (.co-*)
+   sobre los tokens del design system (bq-v5.css).
+   ============================================================ */
+body{background:var(--surface-soft);overflow-x:clip}
+
+/* Top bar minimalista: reduce distracciones, comunica seguridad. */
+.co-top{
+  position:sticky;top:0;z-index:20;
+  display:flex;align-items:center;justify-content:space-between;gap:16px;
+  padding:14px clamp(16px,4vw,40px);
+  background:var(--color-white);border-bottom:1px solid var(--border-soft);
+}
+.co-logo{font-family:var(--font-display);font-size:1.15rem;letter-spacing:-.03em;color:var(--color-dark)}
+.co-logo span{color:var(--color-brand)}
+.co-secure{
+  display:inline-flex;align-items:center;gap:7px;
+  font-family:var(--font-title);font-weight:600;font-size:.8rem;color:#2e7d32;
+}
+.co-secure i{width:15px;height:15px}
+.co-back{
+  display:inline-flex;align-items:center;gap:6px;
+  font-family:var(--font-title);font-weight:600;font-size:.82rem;color:var(--color-dark);opacity:.75;
+}
+.co-back:hover{opacity:1;color:var(--color-brand)}
+.co-back i{width:15px;height:15px}
+@media(max-width:640px){ .co-back span{display:none} }
+
+.co-main{padding:clamp(20px,4vw,44px) clamp(16px,4vw,40px) 60px;max-width:1120px;margin:0 auto}
+.co-grid{display:grid;grid-template-columns:1fr 380px;gap:clamp(20px,3vw,40px);align-items:start}
+@media(max-width:900px){ .co-grid{grid-template-columns:1fr} }
+
+/* ---------- STEPPER ---------- */
+.co-steps{display:flex;align-items:center;list-style:none;margin:0 0 30px;padding:0}
+.co-step{display:flex;align-items:center;gap:10px;flex:0 0 auto}
+.co-step .dot{
+  width:32px;height:32px;border-radius:50%;display:grid;place-items:center;
+  font-family:var(--font-title);font-weight:700;font-size:.9rem;
+  background:var(--color-white);color:#9a9a9a;border:2px solid var(--border-soft);
+  transition:var(--transition-smooth);flex:0 0 auto;
+}
+.co-step .lbl{font-family:var(--font-title);font-weight:600;font-size:.86rem;color:#9a9a9a;transition:var(--transition-smooth)}
+.co-step .bar{width:clamp(16px,5vw,64px);height:2px;background:var(--border-soft);margin:0 8px;border-radius:2px;transition:var(--transition-smooth)}
+.co-step.active .dot{background:var(--color-brand);color:#fff;border-color:var(--color-brand);box-shadow:var(--shadow-brand)}
+.co-step.active .lbl{color:var(--color-dark)}
+.co-step.done .dot{background:var(--color-dark);color:#fff;border-color:var(--color-dark)}
+.co-step.done .lbl{color:var(--color-dark)}
+.co-step.done .bar{background:var(--color-dark)}
+.co-step .dot i{width:16px;height:16px}
+@media(max-width:520px){ .co-step .lbl{display:none} .co-step .bar{flex:1;width:auto} .co-steps{justify-content:space-between} }
+
+/* ---------- PANELS / FORM ---------- */
+.co-card{background:var(--color-white);border:1px solid var(--border-soft);border-radius:var(--border-radius);box-shadow:var(--shadow-soft);padding:clamp(20px,3vw,30px)}
+.co-panel{display:none}
+.co-panel.active{display:block;animation:coIn .35s cubic-bezier(.34,1.4,.5,1)}
+@keyframes coIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.co-panel h2{font-size:1.3rem;margin-bottom:4px}
+.co-panel .co-sub{color:#8a8a8a;font-size:.9rem;margin-bottom:22px}
+
+.co-field{margin-bottom:16px}
+.co-field label{display:block;font-family:var(--font-title);font-weight:600;font-size:.82rem;margin-bottom:7px;color:var(--color-dark)}
+.co-field label .opt{font-weight:400;opacity:.55}
+.co-field input,.co-field select{
+  width:100%;padding:13px 14px;font-family:var(--font-body);font-size:.95rem;color:var(--color-dark);
+  background:var(--color-white);border:1.5px solid var(--border-soft);border-radius:11px;
+  transition:border-color .18s,box-shadow .18s;
+}
+.co-field input:focus,.co-field select:focus{outline:none;border-color:var(--color-brand);box-shadow:0 0 0 3px rgba(243,146,0,.16)}
+.co-field.err input,.co-field.err select{border-color:#e5484d;box-shadow:0 0 0 3px rgba(229,72,77,.13)}
+.co-err{display:block;color:#e5484d;font-size:.78rem;margin-top:6px;min-height:1em;font-weight:500}
+.co-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:480px){ .co-row{grid-template-columns:1fr} }
+.co-section-title{font-family:var(--font-title);font-weight:700;font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:#9a9a9a;margin:26px 0 14px}
+
+/* Aviso de envío dentro del paso 2 */
+.co-ship-box{display:flex;gap:12px;align-items:flex-start;background:#fff7ec;border:1px solid #ffe1b8;border-radius:11px;padding:13px 14px;margin-bottom:20px;font-size:.86rem}
+.co-ship-box i{width:18px;height:18px;color:var(--color-brand);flex:0 0 auto;margin-top:2px}
+.co-ship-result{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px;border:1.5px dashed var(--border-soft);border-radius:11px;margin-top:4px;font-family:var(--font-title);font-weight:600}
+.co-ship-result.ok{border-color:var(--color-brand);border-style:solid;background:#fff7ec}
+.co-ship-result .price{font-size:1.05rem}
+.co-ship-result .muted{color:#9a9a9a;font-weight:500}
+
+/* Recap (paso 3) */
+.co-recap{border:1px solid var(--border-soft);border-radius:11px;overflow:hidden}
+.co-recap .r{display:flex;justify-content:space-between;gap:14px;padding:13px 15px;font-size:.9rem}
+.co-recap .r+.r{border-top:1px solid var(--border-soft)}
+.co-recap .r .k{color:#8a8a8a;font-family:var(--font-title);font-weight:600;flex:0 0 92px}
+.co-recap .r .v{text-align:right;color:var(--color-dark)}
+.co-recap .r .edit{color:var(--color-brand);font-family:var(--font-title);font-weight:600;font-size:.8rem}
+
+/* Botones de navegación */
+.co-nav{display:flex;gap:12px;margin-top:24px}
+.co-nav .grow{flex:1}
+.co-btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:9px;
+  font-family:var(--font-title);font-weight:700;font-size:.95rem;padding:14px 22px;border-radius:12px;
+  transition:var(--transition-smooth);
+}
+.co-btn.primary{background:var(--color-brand);color:#fff}
+.co-btn.primary:hover{transform:translateY(-2px);box-shadow:var(--shadow-brand)}
+.co-btn.primary:disabled{background:#e2e2e2;color:#a0a0a0;cursor:not-allowed;transform:none;box-shadow:none}
+.co-btn.ghost{background:transparent;color:var(--color-dark);border:1.5px solid var(--border-soft)}
+.co-btn.ghost:hover{background:#fafafa;border-color:var(--color-dark)}
+.co-btn.pay{width:100%;padding:17px;font-size:1.05rem}
+.co-btn i{width:18px;height:18px}
+.co-formerr{color:#e5484d;font-size:.85rem;margin-top:12px;font-weight:600;min-height:1em}
+.co-legal{color:#9a9a9a;font-size:.76rem;margin-top:14px;line-height:1.5}
+
+/* ---------- ORDER SUMMARY ---------- */
+.co-summary{position:sticky;top:88px}
+@media(max-width:900px){ .co-summary{position:static;order:-1} }
+.co-sum-card{background:var(--color-white);border:1px solid var(--border-soft);border-radius:var(--border-radius);box-shadow:var(--shadow-soft);overflow:hidden}
+.co-sum-head{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid var(--border-soft);cursor:default}
+.co-sum-head h3{font-size:.95rem;display:flex;align-items:center;gap:8px}
+.co-sum-head h3 i{width:17px;height:17px;color:var(--color-brand)}
+.co-sum-toggle{display:none;background:none;color:var(--color-brand);font-family:var(--font-title);font-weight:600;font-size:.82rem;align-items:center;gap:5px}
+.co-sum-toggle i{width:15px;height:15px;transition:transform .2s}
+@media(max-width:900px){
+  .co-sum-head{cursor:pointer}
+  .co-sum-toggle{display:inline-flex}
+  .co-sum-body{display:none}
+  .co-sum-card.open .co-sum-body{display:block}
+  .co-sum-card.open .co-sum-toggle i{transform:rotate(180deg)}
+}
+.co-sum-items{padding:8px 18px;max-height:340px;overflow-y:auto}
+.co-li{display:flex;gap:12px;padding:11px 0}
+.co-li+.co-li{border-top:1px solid var(--surface-soft)}
+.co-li .thumb{width:54px;height:54px;border-radius:9px;background:var(--surface-img);flex:0 0 auto;overflow:hidden;position:relative}
+.co-li .thumb img{width:100%;height:100%;object-fit:cover}
+.co-li .thumb .q{position:absolute;top:-7px;right:-7px;min-width:20px;height:20px;padding:0 5px;border-radius:20px;background:var(--color-dark);color:#fff;font-family:var(--font-title);font-weight:700;font-size:.7rem;display:grid;place-items:center}
+.co-li .meta{flex:1;min-width:0}
+.co-li .meta h4{font-size:.86rem;font-weight:600;line-height:1.3;font-family:var(--font-body)}
+.co-li .meta .var{font-size:.76rem;color:#9a9a9a;margin-top:2px}
+.co-li .price{font-family:var(--font-title);font-weight:700;font-size:.86rem;white-space:nowrap}
+.co-sum-tot{padding:14px 18px;border-top:1px solid var(--border-soft);background:#fbfbfb}
+.co-tr{display:flex;justify-content:space-between;font-size:.88rem;padding:4px 0;color:#5a5a5a}
+.co-tr .muted{color:#9a9a9a}
+.co-tr.grand{font-family:var(--font-title);font-weight:700;font-size:1.15rem;color:var(--color-dark);padding-top:12px;margin-top:6px;border-top:1px solid var(--border-soft)}
+.co-trust{display:flex;align-items:center;gap:8px;padding:12px 18px;border-top:1px solid var(--border-soft);color:#8a8a8a;font-size:.76rem}
+.co-trust i{width:15px;height:15px}
+
+/* Estado vacío / carga */
+.co-state{text-align:center;padding:70px 20px;color:#8a8a8a}
+.co-state i{width:44px;height:44px;color:#c8c8c8;margin-bottom:14px}
+.co-state h2{color:var(--color-dark);font-size:1.3rem;margin-bottom:8px}
+.co-state .co-btn{margin-top:20px}
+
+.co-foot{text-align:center;padding:26px;color:#a0a0a0;font-size:.78rem;border-top:1px solid var(--border-soft);background:var(--color-white)}
+.co-spin{display:inline-block;width:15px;height:15px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:coSpin .7s linear infinite;vertical-align:-2px}
+@keyframes coSpin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body data-page="checkout">
+
+<header class="co-top">
+  <a class="co-logo" href="tienda.html">BLACK<span>QUACK</span></a>
+  <div class="co-secure"><i data-lucide="lock"></i> Pago seguro con Flow</div>
+  <a class="co-back" href="tienda.html"><i data-lucide="arrow-left"></i> <span>Seguir comprando</span></a>
+</header>
+
+<main class="co-main">
+  <div id="coApp"><!-- render: js/checkout-page.js --></div>
+</main>
+
+<footer class="co-foot">BlackQuack · Hecho con 🦆 en Chile · Pagos procesados por Flow</footer>
+
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/checkout-page.js"></script>
+</body>
+</html>

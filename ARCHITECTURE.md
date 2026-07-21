@@ -6,6 +6,8 @@
 
 **Estado:** en producción (Cloudflare Pages), validado con venta real de punta a
 punta. Barrido de reservas automatizado (Worker cron) y checkout con rate limiting.
+Despacho a domicilio cotizado en vivo con Chilexpress y checkout en página con
+stepper (rama `feat/chilexpress-envio`).
 **Última actualización:** 20 julio 2026.
 
 ---
@@ -25,9 +27,11 @@ Tres servicios externos:
 | **Cloudflare D1** (SQLite en el edge) | Verdad del **stock en vivo**: decremento atómico, reservas. |
 | **Cloudflare KV** | Registro de órdenes (estado de pago, datos de despacho). |
 | **Flow** (pasarela chilena) | Procesa los pagos (Webpay, etc.) vía firma HMAC. |
+| **Chilexpress** (API Cotizador) | Cotiza el envío a domicilio en vivo (peso + dimensiones + cobertura). |
 
-Despacho: **"Por Pagar"** (Starken o Chilexpress) — el cliente paga el envío al
-recibir, así que Flow solo cobra el valor de los productos.
+Despacho: **a domicilio con Chilexpress**, cotizado en el checkout y cobrado junto
+con los productos por Flow. Flow cobra `productos + envío`. *(Antes era "Por Pagar";
+la sucursal y el tracking automático quedan para la fase con cuenta comercial Chilexpress.)*
 
 ---
 
@@ -41,6 +45,8 @@ recibir, así que Flow solo cobra el valor de los productos.
 - **Datos:** Contentful Delivery API (lectura), Cloudflare **D1** (SQL
   transaccional), Cloudflare **KV** (órdenes).
 - **Pagos:** Flow (`flow.cl`), API REST con firma HMAC-SHA256.
+- **Envíos:** Chilexpress API Cotizador (Azure APIM, header `Ocp-Apim-Subscription-Key`),
+  llamada server-side desde `functions/_lib/chilexpress.js`.
 - **Hosting/CI:** Cloudflare Pages conectado al repo de GitHub; push a `main`
   despliega producción, push a otra rama crea un Preview.
 
@@ -53,11 +59,12 @@ flowchart TD
   subgraph Browser["Navegador (Vanilla JS)"]
     A[config.js] --> B[api.js<br/>catálogo desde Contentful]
     B --> C[bq-v5.js<br/>render PLP/PDP, carrito por SKU]
-    C --> D[checkout.js<br/>formulario de despacho]
+    C --> D[checkout.html + checkout-page.js<br/>stepper de 3 pasos]
   end
 
   B -->|CDA include=2| CF[(Contentful<br/>Delivery API)]
   C -->|GET /api/stock| SF[Pages Functions]
+  D -->|POST /api/shipping/quote| SF
   D -->|POST /api/checkout| SF
 
   subgraph SF["Cloudflare Pages Functions (edge)"]
@@ -68,12 +75,14 @@ flowchart TD
     S5[api/comunas.js]
     S6[api/admin/resync-stock.js]
     S7[api/admin/sweep.js]
+    S8[api/shipping/quote.js]
   end
 
-  S1 & S2 -->|catálogo, stock inicial| CF
+  S1 & S2 & S8 -->|catálogo, stock inicial| CF
   S1 & S2 & S3 & S7 -->|stock atómico| D1[(D1<br/>blackquack-stock)]
   S2 & S3 & S4 & S7 -->|órdenes| KV[(KV<br/>ORDERS_KV)]
   S2 & S3 & S4 -->|firma HMAC| FLOW[(Flow API)]
+  S2 & S8 -->|cotiza envío| CHX[(Chilexpress<br/>API Cotizador)]
   FLOW -->|webhook POST| S3
   FLOW -->|redirect POST| S4
 
@@ -86,6 +95,8 @@ flowchart TD
 El **barrido de reservas** ya no vive en Pages Functions: corre en un Worker
 independiente con Cron Trigger (`worker-cron/`, ver §8). El `POST /api/checkout`
 está protegido por una regla WAF de rate limiting que corta antes de la Function.
+El **checkout es una página** (`checkout.html`, stepper de 3 pasos) que cotiza el
+envío con `/api/shipping/quote` y luego cobra en `/api/checkout` (ver §6.6).
 
 **Principio clave:** el navegador nunca calcula precios ni ve el `secretKey` de
 Flow. El precio se **recalcula en el servidor** contra Contentful, y la firma
@@ -99,25 +110,32 @@ qty}` + datos de despacho.
 ```
 ├── index.html, tienda.html, producto.html, talleres.html,
 │   nosotros.html, labs.html, contacto.html, gracias.html   # páginas públicas
+├── checkout.html                                           # página de pago (stepper 3 pasos)
 ├── admin.html                                              # panel admin (no enlazado)
 ├── css/bq-v5.css                                           # todo el CSS (design system)
 ├── js/
 │   ├── config.js        # window.BQ_CONFIG (space id + CDA token públicos)
 │   ├── api.js           # fetchProducts(): Contentful → objetos + Rich Text→HTML
 │   ├── bq-v5.js         # chrome (nav/footer/cart), PLP, PDP, carrito por SKU, showcase
-│   └── checkout.js      # modal de despacho, validación cliente, POST /api/checkout
+│   ├── checkout-page.js # app del checkout: stepper, validación, cotización y pago
+│   └── checkout.js      # modal de despacho LEGADO (sin uso; reemplazado por la página)
 ├── functions/                                              # Cloudflare Pages Functions
 │   ├── _lib/
 │   │   ├── flow.js      # firma HMAC, flowPost/flowGet, flowBase (sandbox/prod)
-│   │   ├── catalog.js   # getCatalog() desde Contentful, priceCart(), buildSubject()
+│   │   ├── catalog.js   # getCatalog() (incl. peso/dimensiones), priceCart(), buildSubject()
 │   │   ├── stock.js     # D1: variantKey, lazySeed, reserve/release/commit, resync
 │   │   ├── sweep-core.js # lógica del barrido de reservas (la usan /api/admin/sweep y el Worker cron)
+│   │   ├── chilexpress.js         # cliente API Cotizador (filtra devoluciones, toma el más barato)
+│   │   ├── chilexpress-geo.js     # origen (env) + aliases + comuna→countyCode
+│   │   ├── chilexpress-coverage-data.js # GENERADO: mapa comuna→countyCode (339/346)
+│   │   ├── shipping-quote.js      # peso+caja del carrito + cotización (lo usan quote y checkout)
 │   │   ├── shipping.js  # validación RUT (mód. 11), teléfono, comuna
 │   │   └── comunas.js   # 16 regiones · 346 comunas (fuente de verdad server)
 │   └── api/
 │       ├── stock.js          # GET  /api/stock?product=ID
 │       ├── comunas.js        # GET  /api/comunas
-│       ├── checkout.js       # POST /api/checkout  (reserva + crea pago Flow)
+│       ├── shipping/quote.js # POST /api/shipping/quote  (cotiza envío a domicilio)
+│       ├── checkout.js       # POST /api/checkout  (reserva + envío + crea pago Flow)
 │       ├── flow/confirm.js   # POST /api/flow/confirm  (webhook: fuente de verdad del pago)
 │       ├── flow/return.js    # POST /api/flow/return   (aterrizaje del navegador)
 │       └── admin/
@@ -128,7 +146,9 @@ qty}` + datos de despacho.
 │   ├── wrangler.toml    # crons, bindings D1/KV por ID, observability
 │   └── README.md        # deploy y operación del Worker
 ├── scripts/
-│   └── setup-ratelimit.sh # crea/actualiza (idempotente) la regla WAF de rate limiting
+│   ├── setup-ratelimit.sh          # crea/actualiza (idempotente) la regla WAF de rate limiting
+│   ├── fetch-chilexpress-coverage.mjs # genera chilexpress-coverage-data.js desde la API Cobertura
+│   └── test-chilexpress-quote.mjs   # prueba aislada del Cotizador desde Node
 ├── schema.sql           # DDL de D1 (tablas stock, stock_ledger)
 ├── seed.sql             # siembra de ejemplo (opcional; el lazy-seed la reemplaza)
 ├── wrangler.toml        # binding D1 para local/CLI (producción se ata en el panel; gitignored en la raíz)
@@ -153,6 +173,8 @@ Content type **`product`** (campo `id` es el displayField, ej. `BQ-001`):
 | `category` | Symbol | |
 | `price` | Integer | CLP entero; precio del producto simple / fallback |
 | `stock` | Integer | Stock inicial **global** (productos simples) |
+| `peso_gramos` | Integer | Peso del producto (g), para cotizar el envío. Si falta → default 500 g |
+| `alto_cm`, `ancho_cm`, `largo_cm` | Integer | Dimensiones (cm) del paquete; si faltan → caja por defecto |
 | `image`, `image_views` | Asset / Array | Imágenes; redimensionadas con la Images API |
 | `variants` | Array→Link | Referencias a `productVariant` |
 | `details` | RichText | Bloque "detalles" → se renderiza a HTML |
@@ -198,9 +220,13 @@ Clave `order:<flowToken>` → JSON:
 ```jsonc
 {
   "commerceOrder": "BQ-XXXX", "flowOrder": 123, "email": "...",
-  "amount": 13990, "lines": [{ "id","key","qty","unit_price", ... }],
+  "amount": 17980,                 // total cobrado por Flow (productos + envío)
+  "amount_products": 13990,        // desglose: productos
+  "amount_shipping": 3990,         // desglose: envío cotizado
+  "lines": [{ "id","key","qty","unit_price", ... }],
   "shipping": { "nombre","rut","telefono","direccion","comuna","region",
-                "courier":"Starken / Chilexpress","modalidad":"Por Pagar" },
+                "courier":"Chilexpress","metodo":"domicilio",
+                "modalidad":"Despacho a domicilio","costo":3990,"servicio":"EXPRESS" },
   "status": "pending|paid|rejected|canceled|abandoned",
   "stock_state": "reserved|committed|released",   // idempotencia del stock
   "created_at": "...", "confirmed_at": "..."
@@ -247,6 +273,7 @@ sequenceDiagram
   participant CO as /api/checkout
   participant CF as Contentful
   participant D1 as D1
+  participant CHX as Chilexpress
   participant KV as KV
   participant F as Flow
 
@@ -257,11 +284,17 @@ sequenceDiagram
   alt sin stock
     CO-->>B: 409 "se agotó"
   else reservado
-    CO->>F: payment/create (firma HMAC, timeout=3600s)
-    F-->>CO: { url, token }
-    CO->>KV: put order:token {stock_state:'reserved', lines, shipping...}
-    CO-->>B: { redirect: url?token }
-    B->>F: paga en la pasarela
+    CO->>CHX: computeShipping() (RECOTIZA envío server-side)
+    alt sin cobertura
+      CO->>D1: releaseCart (devuelve el stock)
+      CO-->>B: 409 "no despachamos a esa comuna"
+    else con envío (o fallback si CHX falla)
+      CO->>F: payment/create amount=productos+envío (HMAC, timeout=3600s)
+      F-->>CO: { url, token }
+      CO->>KV: put order:token {reserved, lines, amount_products, amount_shipping, shipping}
+      CO-->>B: { redirect: url?token }
+      B->>F: paga en la pasarela
+    end
   end
 ```
 
@@ -270,7 +303,11 @@ Puntos críticos:
   qty>=n` — dos compras simultáneas de la última unidad no pueden ganar ambas
   (la segunda afecta 0 filas → 409). Esto **impide la sobreventa**.
 - Si Flow falla tras reservar → se **libera** la reserva (compensación).
-- El precio del carrito se recalcula server-side; el cliente nunca lo fija.
+- El precio del carrito **y el envío** se recalculan server-side; el cliente nunca
+  los fija (el costo mostrado en el paso 2 es solo UX).
+- Sin cobertura Chilexpress → se libera la reserva y se rechaza (no se cobra).
+- Si el Cotizador falla → **tarifa de respaldo** (`FALLBACK_SHIPPING`) para no
+  perder la venta; se registra en logs para conciliar.
 - `timeout: 3600` en la orden Flow hace determinista el abandono (ver sweeper).
 
 ### 6.4 Confirmación del pago (webhook) — fuente de verdad
@@ -305,6 +342,41 @@ reserved --(pago OK)--> committed
 reserved --(rechazo/anulación/abandono)--> released
 ```
 
+### 6.6 Checkout en página + cotización de envío (Chilexpress)
+
+El checkout dejó de ser un modal: es la página **`checkout.html`** (app en
+`js/checkout-page.js`), un **stepper de 3 pasos** — ① Contacto, ② Envío, ③ Pago —
+con resumen del pedido sticky. Lee el carrito de `localStorage` (`bq_cart_v5`) y el
+catálogo con `fetchProducts()`; el botón "Finalizar compra" del carrito navega a
+`checkout.html`. El modal viejo (`js/checkout.js`) queda como legado sin uso.
+
+**Cotización (paso 2):** al elegir comuna, el navegador llama
+`POST /api/shipping/quote {comuna, items}`. La cadena es:
+
+```mermaid
+flowchart LR
+  Q[/api/shipping/quote/] --> G["chilexpress-geo.js<br/>comuna→countyCode"]
+  Q --> W["shipping-quote.js<br/>peso + caja del carrito"]
+  W --> R["chilexpress.js<br/>POST /rating/.../rates/courier"]
+  R --> CHX[(Chilexpress QA/prod)]
+```
+
+- **`chilexpress-geo.js`** traduce la comuna a su `countyCode` de 4 letras (mapa
+  generado en `chilexpress-coverage-data.js`; el origen sale del env
+  `CHX_ORIGIN_COMUNA`, hoy Quilpué). 2 comunas sin cobertura: San Fabián, O'Higgins.
+- **`shipping-quote.js`** suma `peso_gramos × qty` y arma la caja (máx de las
+  dimensiones de los productos, o caja por defecto). `computeShipping()` es el helper
+  compartido por `quote` y `checkout` → la cotización es idéntica en ambos.
+- **`chilexpress.js`** llama al Cotizador, **filtra los servicios de devolución**
+  (cod 14/47) y devuelve el **más barato** de los de ida (2/3/4/5/41/42).
+- El costo se muestra y se suma al total; `/api/checkout` lo **recotiza** antes de
+  cobrar (nunca confía en el navegador).
+
+**Ambientes Chilexpress:** `CHX_SANDBOX` elige el host (`≠0` = QA `testservices`,
+`0` = prod `services`); la llave `CHX_RATING_KEY` debe ser **del mismo ambiente**.
+Hoy solo hay llaves QA (precios representativos, no reales); producción requiere
+cuenta comercial + credenciales prod (ticket en curso).
+
 ---
 
 ## 7. Seguridad
@@ -314,6 +386,8 @@ reserved --(rechazo/anulación/abandono)--> released
 | **Flow secretKey** | Solo en Cloudflare Secrets (encriptado) y `.dev.vars` local (gitignored). **Nunca** llega al navegador. Toda la firma HMAC es server-side (`functions/_lib/flow.js`). |
 | **Firma HMAC** | Params ordenados alfabéticamente, `nombre+valor` sin separador, HMAC-SHA256 hex, `s` excluido del string. Validado contra Flow real (sandbox y prod). |
 | **Precio** | Recalculado en el servidor contra Contentful (`priceCart`). El browser no puede adulterarlo. |
+| **Costo de envío** | Recotizado server-side en `/api/checkout` (`computeShipping`); el costo que muestra el navegador es solo UX, no se cobra tal cual. |
+| **Chilexpress key** | `CHX_RATING_KEY` en Cloudflare Secrets / `.dev.vars` (gitignored). La cotización se llama **server-side** (`chilexpress.js`); la key nunca llega al navegador (Azure APIM + CORS). |
 | **Contentful CDA token** | Es de **solo lectura** y público por diseño (viaja al navegador). No es un secreto. |
 | **Sobreventa** | Imposible por el `UPDATE ... WHERE qty>=n` atómico de D1. |
 | **`FLOW_SANDBOX`** | Obligatoria (`"0"`/`"1"`); si falta, el checkout se **bloquea** en vez de asumir producción. |
@@ -381,11 +455,19 @@ npx wrangler secret put FLOW_SECRET_KEY
 | `CONTENTFUL_ACCESS_TOKEN` | Plaintext | CDA (solo lectura) | igual |
 | `CONTENTFUL_ENVIRONMENT` | Plaintext | `master` | igual |
 | `ADMIN_RESYNC_SECRET` | Secret | aleatorio | aleatorio |
+| `CHX_RATING_KEY` | Secret | prod (pendiente) | QA (bq-cotizador) |
+| `CHX_ORIGIN_COMUNA` | Plaintext | `QUILPUE` | `QUILPUE` |
+| `CHX_SANDBOX` | Plaintext | `0` (con llave prod) | `1` / ausente (QA) |
 
-**Regla de oro:** `FLOW_SANDBOX=0` va con llaves de **producción**;
+**Regla de oro (Flow):** `FLOW_SANDBOX=0` va con llaves de **producción**;
 `FLOW_SANDBOX=1` con llaves de **sandbox**. Nunca se cruzan (Flow rechaza el
 apiKey del ambiente equivocado). La **rama decide el ambiente**: `main` →
 Production (dinero real), otras ramas → Preview (sandbox).
+
+**Regla de oro (Chilexpress):** igual criterio — `CHX_SANDBOX` y `CHX_RATING_KEY`
+deben ser del **mismo ambiente** (QA testservices ↔ llave QA; prod services ↔ llave
+prod). Hoy Production usa `CHX_SANDBOX=1` porque aún no hay llave prod; hasta tenerla
+NO se debe mergear a `main` para cobrar precios reales de envío.
 
 ### Bindings (panel → Settings → Functions)
 
@@ -414,9 +496,10 @@ npx wrangler pages dev . --kv ORDERS_KV
 npx wrangler d1 execute blackquack-stock --local --file=schema.sql
 ```
 
-Para pruebas de solo-frontend (sin Functions), `python3 -m http.server` sirve;
-el formulario usa un **fallback embebido de comunas** en `checkout.js` cuando
-`/api/comunas` no existe, y el stock cae al valor inicial de Contentful.
+La página de checkout (`checkout.html`) necesita las Functions corriendo: cotiza
+con `/api/shipping/quote` (requiere `CHX_RATING_KEY` en `.dev.vars`) y lista comunas
+con `/api/comunas`. Para probar la cotización desde Node sin levantar el sitio:
+`node scripts/test-chilexpress-quote.mjs` (con `CHX_RATING_KEY` exportada).
 
 ---
 
@@ -434,10 +517,17 @@ el formulario usa un **fallback embebido de comunas** en `checkout.js` cuando
 4. **Productos simples sin `stock` global** en Contentful → aparecen en 0
    (no comprables) hasta que se les asigne stock.
 5. **Rich Text** depende de esm.sh en runtime (degradación elegante si falla).
-6. **Comunas embebidas** en `checkout.js` son un fallback: mantener sincronizado
-   con `functions/_lib/comunas.js` si cambia.
-7. El **webhook `confirm`** solo se prueba de verdad desplegado (Flow no alcanza
+6. El **webhook `confirm`** solo se prueba de verdad desplegado (Flow no alcanza
    `localhost`).
+7. **Envío Chilexpress — QA:** hoy solo hay llaves de **prueba (QA)**; los precios
+   son representativos pero pueden diferir de los reales. Antes de cobrar envíos
+   reales en `main`: conseguir credenciales **prod** + `CHX_SANDBOX=0`. Ticket
+   comercial (SR-107752) en curso.
+8. **Sucursal, OT y tracking automático** de Chilexpress → fase siguiente; requieren
+   cuenta comercial + TCC. El `chilexpress-coverage-data.js` es generado: regenerar
+   con `scripts/fetch-chilexpress-coverage.mjs` si Chilexpress cambia su cobertura.
+9. **Checkout page** requiere las Functions (no corre en `file://` ni en solo-frontend).
+   El modal legado `js/checkout.js` sigue cargado en algunas páginas pero está sin uso.
 
 ---
 
@@ -447,6 +537,8 @@ el formulario usa un **fallback embebido de comunas** en `checkout.js` cuando
   (el `WHERE qty >= ?` es la garantía).
 - **¿El precio es manipulable?** Revisar `priceCart` en `functions/_lib/catalog.js`
   (ignora cualquier precio del cliente).
+- **¿El envío es manipulable?** Revisar que `/api/checkout` llame `computeShipping`
+  y sume ese costo (no el del body); la key `CHX_RATING_KEY` no debe aparecer en `js/`.
 - **¿El secreto de Flow llega al cliente?** `grep -rn "FLOW_SECRET" js/ *.html`
   debe dar 0 usos reales.
 - **¿La firma HMAC es correcta?** `signParams` en `functions/_lib/flow.js`;
