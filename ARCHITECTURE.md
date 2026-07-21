@@ -485,6 +485,44 @@ npx wrangler d1 execute blackquack-stock --remote --file=schema.sql
 
 El stock se puebla solo (lazy-seed) al leer cada producto por primera vez.
 
+### Ambiente de prueba (Preview) — aislado de producción
+
+Las ramas ≠ `main` despliegan a **Preview**. Para que las pruebas **no toquen datos
+reales**, el ambiente Preview usa **recursos separados**:
+
+| Recurso | Producción | Preview |
+|---|---|---|
+| D1 (`ORDERS_DB`) | `blackquack-stock` | `blackquack-stock-preview` |
+| KV (`ORDERS_KV`) | `BLACKQUACK_ORDERS_KV` | `blackquack-orders-preview` |
+| Flow | prod (`FLOW_SANDBOX=0`) | sandbox (`FLOW_SANDBOX=1`) |
+| Chilexpress | prod (pendiente) | QA (`CHX_SANDBOX=1` / ausente) |
+
+Los bindings de Preview (`ORDERS_KV`, `ORDERS_DB`) apuntan a esos recursos de prueba;
+se configuran en Pages → Settings → **Bindings** → ambiente **Preview**. El D1 de
+prueba se crea una vez y se le carga `schema.sql` (panel D1 → **Console**, pegando el
+DDL; o `wrangler d1 execute blackquack-stock-preview --remote --file=schema.sql`).
+
+**URLs de Preview:** cada deploy tiene una URL **congelada** por hash
+(`<hash>.black-cuack-studio.pages.dev`) que muestra SIEMPRE esa versión; la URL de
+rama (ej. `feat-chilexpress-envio.black-cuack-studio.pages.dev`) apunta al **último**
+deploy. *(Si ves código viejo, estás en una URL de hash antiguo — usa la de rama.)*
+
+**Ventaja sobre local:** el webhook `confirm` de Flow **sí** llega al Preview (URL
+pública), así que se prueba el ciclo completo pago→confirmación→commit de stock —
+algo que `localhost` no permite. Validado E2E en Preview (orden BQ-1B21D273).
+
+### Datos de prueba (Transbank Webpay — ambiente de integración)
+
+El sandbox de Flow (`FLOW_SANDBOX=1`) lleva a **Webpay de integración**, sin dinero real:
+
+| Resultado | Tarjeta | CVV | Vencimiento |
+|---|---|---|---|
+| **Aprueba** | VISA `4051 8856 0044 6623` | `123` | cualquier fecha futura |
+| **Rechaza** | Mastercard `5186 0595 5959 0568` | `123` | cualquier fecha futura |
+
+Tras ingresar la tarjeta, Webpay pide autenticación del "banco":
+**RUT `11.111.111-1`**, **Clave `123`**. *(Recordar: Flow tiene monto mínimo $350 CLP.)*
+
 ---
 
 ## 10. Desarrollo local
