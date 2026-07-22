@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Seguimiento de tu pedido — BlackQuack</title>
+<meta name="description" content="Sigue el estado de tu pedido BlackQuack.">
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Archivo+Black&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<link rel="stylesheet" href="css/bq-v5.css">
+<style>
+body{background:var(--surface-soft);overflow-x:clip}
+.sg-top{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px clamp(16px,4vw,40px);background:var(--color-white);border-bottom:1px solid var(--border-soft)}
+.sg-logo{font-family:var(--font-display);font-size:1.15rem;letter-spacing:-.03em;color:var(--color-dark)}
+.sg-logo span{color:var(--color-brand)}
+.sg-back{display:inline-flex;align-items:center;gap:6px;font-family:var(--font-title);font-weight:600;font-size:.82rem;color:var(--color-dark);opacity:.75}
+.sg-back:hover{opacity:1;color:var(--color-brand)}
+.sg-back i{width:15px;height:15px}
+.sg-main{max-width:680px;margin:0 auto;padding:clamp(24px,5vw,48px) clamp(16px,4vw,40px) 60px}
+.sg-card{background:var(--color-white);border:1px solid var(--border-soft);border-radius:var(--border-radius);box-shadow:var(--shadow-soft);padding:clamp(22px,4vw,34px);margin-bottom:20px}
+.sg-h{font-size:1.4rem;margin-bottom:4px}
+.sg-sub{color:#8a8a8a;font-size:.9rem;margin-bottom:22px}
+.sg-order-code{font-family:var(--font-mono);font-weight:700;color:var(--color-brand)}
+
+/* búsqueda */
+.sg-search{display:flex;gap:10px;margin-top:8px}
+.sg-search input{flex:1;padding:13px 14px;font-family:var(--font-body);font-size:.95rem;border:1.5px solid var(--border-soft);border-radius:11px}
+.sg-search input:focus{outline:none;border-color:var(--color-brand);box-shadow:0 0 0 3px rgba(243,146,0,.16)}
+.sg-btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;font-family:var(--font-title);font-weight:700;font-size:.95rem;padding:13px 22px;border-radius:12px;background:var(--color-brand);color:#fff;transition:var(--transition-smooth)}
+.sg-btn:hover{transform:translateY(-2px);box-shadow:var(--shadow-brand)}
+.sg-btn.ghost{background:transparent;color:var(--color-dark);border:1.5px solid var(--border-soft)}
+.sg-btn i{width:17px;height:17px}
+
+/* barra de progreso */
+.sg-steps{display:flex;margin:6px 0 26px}
+.sg-step{flex:1;text-align:center;position:relative}
+.sg-step .dot{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;margin:0 auto 8px;background:var(--color-white);border:2px solid var(--border-soft);color:#b8b8b8;transition:var(--transition-smooth)}
+.sg-step .dot i{width:18px;height:18px}
+.sg-step .lbl{font-family:var(--font-title);font-weight:600;font-size:.76rem;color:#9a9a9a}
+.sg-step::before{content:'';position:absolute;top:19px;left:-50%;width:100%;height:3px;background:var(--border-soft);z-index:0}
+.sg-step:first-child::before{display:none}
+.sg-step .dot{position:relative;z-index:1}
+.sg-step.done .dot{background:var(--color-dark);border-color:var(--color-dark);color:#fff}
+.sg-step.done::before{background:var(--color-dark)}
+.sg-step.current .dot{background:var(--color-brand);border-color:var(--color-brand);color:#fff;box-shadow:var(--shadow-brand)}
+.sg-step.current::before{background:var(--color-dark)}
+.sg-step.current .lbl,.sg-step.done .lbl{color:var(--color-dark)}
+
+.sg-info{border:1px solid var(--border-soft);border-radius:12px;overflow:hidden}
+.sg-info .r{display:flex;justify-content:space-between;gap:14px;padding:13px 16px;font-size:.9rem}
+.sg-info .r+.r{border-top:1px solid var(--border-soft)}
+.sg-info .r .k{color:#8a8a8a;font-family:var(--font-title);font-weight:600}
+.sg-info .r .v{text-align:right;color:var(--color-dark);font-weight:500}
+.sg-track{margin-top:18px;background:#fff7ec;border:1px solid #ffe1b8;border-radius:12px;padding:16px}
+.sg-track .num{font-family:var(--font-mono);font-weight:700;font-size:1.1rem;color:var(--color-dark)}
+.sg-track a{display:inline-flex;align-items:center;gap:7px;margin-top:10px;color:var(--color-brand);font-family:var(--font-title);font-weight:700}
+.sg-note{color:#9a9a9a;font-size:.82rem;margin-top:16px;line-height:1.5}
+.sg-state{text-align:center;padding:50px 20px;color:#8a8a8a}
+.sg-state i{width:42px;height:42px;color:#c8c8c8;margin-bottom:12px}
+.sg-state h2{color:var(--color-dark);font-size:1.2rem;margin-bottom:6px}
+.sg-badge{display:inline-flex;align-items:center;gap:7px;padding:6px 12px;border-radius:100px;font-family:var(--font-title);font-weight:700;font-size:.8rem;background:var(--color-brand);color:#fff;margin-bottom:16px}
+.sg-badge.cancel{background:#e5484d}
+</style>
+</head>
+<body data-page="seguimiento">
+
+<header class="sg-top">
+  <a class="sg-logo" href="tienda.html">BLACK<span>QUACK</span></a>
+  <a class="sg-back" href="tienda.html"><i data-lucide="arrow-left"></i> Ir a la tienda</a>
+</header>
+
+<main class="sg-main">
+  <div id="sgApp"></div>
+</main>
+
+<script src="js/seguimiento.js"></script>
+</body>
+</html>

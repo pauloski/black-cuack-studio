@@ -92,6 +92,16 @@
     ninguna URL ni secreto. Este botón es solo para correrlo a mano; el secreto viaja en una
     cabecera, nunca en la URL.
   </p>
+
+  <h1 style="margin-top:40px">Pedidos y despacho</h1>
+  <p class="admin-sub">Órdenes pagadas. Al dejar el paquete en Chilexpress, pega el N° de seguimiento y marca <strong>Despachado</strong>; el cliente lo verá en su página de seguimiento.</p>
+
+  <div class="admin-card">
+    <div class="admin-row">
+      <button class="btn lg" id="btnOrders" data-hover><i data-lucide="refresh-cw"></i> Cargar pedidos</button>
+    </div>
+    <div id="ordersResult"></div>
+  </div>
 </div>
 
 <script>
@@ -205,6 +215,85 @@
     }
   }
   btnSweep.addEventListener('click', sweep);
+
+  /* ---------- Pedidos / despacho ---------- */
+  var btnOrders = document.getElementById('btnOrders');
+  var ordersResult = document.getElementById('ordersResult');
+  var STATE_LABEL = { pendiente_pago: 'Pendiente de pago', en_preparacion: 'En preparación', despachado: 'Despachado', en_transito: 'En tránsito', en_reparto: 'En reparto', entregado: 'Entregado', cancelado: 'Cancelado' };
+
+  function adminSecret() { return elSecret.value.trim(); }
+
+  async function loadOrders() {
+    var s = adminSecret();
+    if (!s) { ordersResult.innerHTML = '<div class="err-line">Ingresa el secreto (arriba).</div>'; lucide.createIcons(); return; }
+    sessionStorage.setItem('bq_admin_secret', s);
+    var orig = btnOrders.innerHTML; btnOrders.disabled = true; btnOrders.innerHTML = 'Cargando…'; ordersResult.innerHTML = '';
+    try {
+      var res = await fetch('/api/admin/orders', { headers: { 'x-admin-secret': s } });
+      var data = await res.json();
+      if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
+      renderOrders(data.orders || []);
+    } catch (e) {
+      ordersResult.innerHTML = '<div class="err-line"><i data-lucide="x-circle"></i> ' + esc(e.message) + '</div>';
+    } finally {
+      btnOrders.disabled = false; btnOrders.innerHTML = orig; if (window.lucide) lucide.createIcons();
+    }
+  }
+
+  function renderOrders(orders) {
+    if (!orders.length) { ordersResult.innerHTML = '<p class="muted">No hay pedidos pagados.</p>'; return; }
+    var rows = orders.map(function (o) {
+      var sh = o.shipping || {};
+      var items = (o.items || []).map(function (i) { return esc(i.title) + (i.variant ? ' (' + esc(i.variant) + ')' : '') + ' ×' + i.qty; }).join('<br>');
+      var estado = esc(o.fulfillmentLabel || STATE_LABEL[o.fulfillment] || o.fulfillment || '—');
+      var action = '';
+      if (o.fulfillment === 'en_preparacion') {
+        action = '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">' +
+          '<input type="text" placeholder="N° seguimiento" data-ot="' + esc(o.order) + '" style="padding:7px 9px;border:1px solid #ccc;border-radius:8px;font-size:.82rem;max-width:150px">' +
+          '<button class="btn" data-dispatch="' + esc(o.order) + '" style="padding:7px 12px;font-size:.8rem">Despachado</button></div>';
+      } else if (o.fulfillment === 'despachado') {
+        action = (o.tracking && o.tracking.ot ? '<div style="font-family:var(--font-mono);font-size:.8rem;margin-bottom:5px">OT: ' + esc(o.tracking.ot) + '</div>' : '') +
+          '<button class="btn secondary" data-deliver="' + esc(o.order) + '" style="padding:7px 12px;font-size:.8rem">Marcar entregado</button>';
+      } else if (o.fulfillment === 'entregado') {
+        action = '<span class="ok-line" style="margin:0"><i data-lucide="check-circle"></i> Entregado</span>';
+      }
+      return '<tr>' +
+        '<td><code>' + esc(o.order) + '</code><br><span class="muted" style="font-size:.75rem">' + esc(String(o.confirmed_at || o.created_at || '').slice(0, 10)) + '</span></td>' +
+        '<td>' + esc(sh.nombre || '') + '<br><span class="muted">' + esc(sh.comuna || '') + '</span><br><span class="muted" style="font-size:.78rem">' + esc(sh.direccion || '') + '</span>' + (sh.telefono ? '<br><span class="muted" style="font-size:.78rem">' + esc(sh.telefono) + '</span>' : '') + '</td>' +
+        '<td style="font-size:.8rem">' + items + '</td>' +
+        '<td><strong>' + estado + '</strong></td>' +
+        '<td>' + action + '</td></tr>';
+    }).join('');
+    ordersResult.innerHTML = '<table><thead><tr><th>Orden</th><th>Cliente / dirección</th><th>Productos</th><th>Estado</th><th>Acción</th></tr></thead><tbody>' + rows + '</tbody></table>';
+    if (window.lucide) lucide.createIcons();
+    ordersResult.querySelectorAll('[data-dispatch]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var code = b.getAttribute('data-dispatch');
+        var inp = ordersResult.querySelector('[data-ot="' + code + '"]');
+        var ot = inp ? inp.value.trim() : '';
+        if (!ot) { alert('Pega el número de seguimiento primero.'); return; }
+        dispatch(code, 'despachado', ot, b);
+      });
+    });
+    ordersResult.querySelectorAll('[data-deliver]').forEach(function (b) {
+      b.addEventListener('click', function () { dispatch(b.getAttribute('data-deliver'), 'entregado', '', b); });
+    });
+  }
+
+  async function dispatch(order, action, tracking, btnEl) {
+    var s = adminSecret(); if (!s) return;
+    var orig = btnEl.innerHTML; btnEl.disabled = true; btnEl.innerHTML = '…';
+    try {
+      var res = await fetch('/api/admin/dispatch', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-secret': s },
+        body: JSON.stringify({ order: order, action: action, tracking: tracking })
+      });
+      var data = await res.json();
+      if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
+      loadOrders();
+    } catch (e) { alert('Error: ' + e.message); btnEl.disabled = false; btnEl.innerHTML = orig; }
+  }
+  btnOrders.addEventListener('click', loadOrders);
 
   lucide.createIcons();
 })();

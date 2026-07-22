@@ -145,6 +145,11 @@
     var shipLine = shipping.ok
       ? '<div class="co-tr"><span>Envío · Chilexpress ' + esc(shipping.servicio) + '</span><span>' + money(shipping.cost) + '</span></div>'
       : '<div class="co-tr"><span>Envío</span><span class="muted">Se calcula en el paso 2</span></div>';
+    var e = shipping.ok ? shipping.entrega : null;
+    var etaLine = e
+      ? '<div class="co-tr"><span class="muted">Entrega estimada</span><span class="muted">' +
+        esc(e.desde === e.hasta ? e.hastaShort : e.desdeShort + ' – ' + e.hastaShort) + '</span></div>'
+      : '';
     var total = productsAmount + (shipping.ok ? shipping.cost : 0);
     return '<aside class="co-summary"><div class="co-sum-card" id="coSumCard">' +
       '<div class="co-sum-head" id="coSumHead">' +
@@ -156,6 +161,7 @@
         '<div class="co-sum-tot">' +
           '<div class="co-tr"><span>Productos</span><span>' + money(productsAmount) + '</span></div>' +
           shipLine +
+          etaLine +
           '<div class="co-tr grand"><span>Total</span><span id="coGrand">' + money(total) + '</span></div>' +
         '</div>' +
         '<div class="co-trust"><i data-lucide="shield-check"></i> Pago protegido · No guardamos tu tarjeta</div>' +
@@ -264,14 +270,25 @@
 
   /* ---------------- cotización de envío ---------------- */
   function resetShip() { shipping = { cost: null, servicio: '', ok: false }; renderShip(); refreshSummary(); toggleToPay(); }
+  function etaText(e) {
+    if (!e) return '';
+    return e.desde === e.hasta ? 'Llega el ' + e.hastaLabel
+      : 'Llega entre el ' + e.desdeLabel + ' y el ' + e.hastaLabel;
+  }
   function renderShip() {
     var box = document.getElementById('coShipResult'); if (!box) return;
-    var label = box.querySelector('.muted') || box.firstElementChild;
-    var price = box.querySelector('.price');
     box.classList.toggle('ok', shipping.ok);
-    if (quoting) { box.innerHTML = '<span class="muted">Calculando envío…</span><span class="price"></span>'; return; }
-    if (!shipping.ok) { box.innerHTML = '<span class="muted">' + (shipping.msg ? esc(shipping.msg) : 'Elige tu comuna para cotizar') + '</span><span class="price"></span>'; return; }
-    box.innerHTML = '<span>Envío a ' + esc(val('comuna')) + ' · <b>Chilexpress ' + esc(shipping.servicio) + '</b></span><span class="price">' + money(shipping.cost) + '</span>';
+    if (quoting) { box.style.flexDirection = 'row'; box.style.alignItems = 'center'; box.innerHTML = '<span class="muted">Calculando envío…</span><span class="price"></span>'; return; }
+    if (!shipping.ok) { box.style.flexDirection = 'row'; box.style.alignItems = 'center'; box.innerHTML = '<span class="muted">' + (shipping.msg ? esc(shipping.msg) : 'Elige tu comuna para cotizar') + '</span><span class="price"></span>'; return; }
+    box.style.flexDirection = 'column'; box.style.alignItems = 'stretch';
+    var eta = etaText(shipping.entrega);
+    box.innerHTML =
+      '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px">' +
+        '<span>Envío a ' + esc(val('comuna')) + ' · <b>Chilexpress ' + esc(shipping.servicio) + '</b></span>' +
+        '<span class="price">' + money(shipping.cost) + '</span></div>' +
+      (eta ? '<div style="margin-top:8px;color:#5a5a5a;font-size:.85rem;display:flex;align-items:center;gap:7px;font-weight:500">' +
+        '<i data-lucide="calendar-clock" style="width:16px;height:16px;color:var(--color-brand)"></i><span>' + esc(eta) + '</span></div>' : '');
+    icons();
   }
   async function requestQuote() {
     var comuna = val('comuna');
@@ -284,7 +301,7 @@
       });
       var data = await res.json().catch(function () { return null; });
       quoting = false;
-      if (data && data.ok) { shipping = { cost: data.costo, servicio: data.servicio || '', ok: true }; }
+      if (data && data.ok) { shipping = { cost: data.costo, servicio: data.servicio || '', ok: true, entrega: data.entrega || null }; }
       else { shipping = { cost: null, servicio: '', ok: false, msg: (data && data.error) || 'No pudimos cotizar el envío.' }; }
     } catch (e) { quoting = false; shipping = { cost: null, servicio: '', ok: false, msg: 'No pudimos cotizar el envío. Reintenta.' }; }
     renderShip(); refreshSummary(); toggleToPay();

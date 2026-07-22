@@ -63,7 +63,10 @@ export async function runSweep(env, { olderThanMin = 60, dryRun = false } = {}) 
       if (!dryRun) {
         try {
           await commitCart(env.ORDERS_DB, order.lines || [], order.commerceOrder);
-          await env.ORDERS_KV.put(key, JSON.stringify({ ...order, status: 'paid', stock_state: 'committed', swept_at: new Date().toISOString() }), { expirationTtl: 60 * 60 * 24 * 90 });
+          // Red de seguridad si el webhook confirm no alcanzó: también avanza el
+          // fulfillment a preparación (a menos que ya esté más adelante).
+          var ff = order.fulfillment && order.fulfillment !== 'pendiente_pago' ? order.fulfillment : 'en_preparacion';
+          await env.ORDERS_KV.put(key, JSON.stringify({ ...order, status: 'paid', stock_state: 'committed', fulfillment: ff, swept_at: new Date().toISOString() }), { expirationTtl: 60 * 60 * 24 * 90 });
         } catch (e) { result.errors++; continue; }
       }
       result.committed++;

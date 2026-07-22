@@ -186,6 +186,37 @@ pagado ──▶ en_preparacion ──▶ despachado ──▶ en_transito ─�
   **descripciones de texto, no un enum estable**, se guarda el último evento (`tracking.ultimo`)
   y el historial (`tracking.eventos[]`); no se codifica un enum rígido.
 
+### 6.1 Estimación de entrega (preparación + tránsito)
+
+Tiempo de entrega = **preparación** (días hábiles nuestros) + **tránsito** (estimado por zona):
+
+- **Preparación:** `HANDLING_DAYS = 2` días hábiles (constante en `functions/_lib/delivery-estimate.js`),
+  con hora de corte `CUTOFF_HOUR = 14` y feriados chilenos (`FERIADOS`, actualizar anualmente).
+  Ej: compra sábado → en Chilexpress el martes.
+- **Tránsito:** el Cotizador NO da días confiables → se estima por **región** (`transitDays`),
+  rango `[min, max]` conservador relativo al origen (Quilpué). Se reemplaza por fechas reales
+  cuando exista la OT (fase con cuenta comercial).
+- **`estimateDelivery(comuna)`** devuelve la ventana `{ desde, hasta, labels }`. La usan
+  `/api/shipping/quote` (mostrar "llega entre X e Y" en el checkout) y `/api/checkout`
+  (guardar `entrega` en la orden). Todo en hora de Chile vía `Intl` (`America/Santiago`).
+
+**Etapas de implementación del fulfillment:**
+- **Etapa A — Estimación de entrega (HECHA):** `delivery-estimate.js`, quote devuelve `entrega`,
+  checkout la guarda + `fulfillment:'pagado'`, y el stepper muestra la ventana en el paso Envío
+  y el resumen.
+- **Etapa B — Estados + seguimiento (HECHA):**
+  - Campo `fulfillment` con transiciones: checkout → `pendiente_pago`; webhook `confirm` (y sweep
+    de respaldo) → `en_preparacion` al pagar; admin → `despachado` (+ N° seguimiento) → `entregado`.
+  - `_lib/fulfillment.js` (estados, labels, `trackingUrl`, `publicOrderView`), `_lib/admin-auth.js`
+    (`requireAdmin`, x-admin-secret).
+  - Endpoints: `GET /api/order/status?order=BQ-…` (público, sin datos personales),
+    `GET /api/admin/orders` (lista pagadas), `POST /api/admin/dispatch` (avanza estado + tracking).
+  - Índice `ordercode:<commerceOrder> → token` escrito en el checkout (para buscar por N° de orden).
+  - Páginas: `seguimiento.html` + `js/seguimiento.js` (barra de progreso + N° + link a Chilexpress),
+    panel "Pedidos y despacho" en `admin.html`, botón "Seguir mi pedido" en `gracias.html`.
+  - PENDIENTE (opcional/fase siguiente): emails de estado; tracking automático (en_transito/entregado)
+    requiere la API de tracking de Chilexpress (cuenta comercial). Verificar el deep-link de `trackingUrl`.
+
 ---
 
 ## 7. Plan por fases

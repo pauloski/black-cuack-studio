@@ -10,6 +10,7 @@ import { json } from '../../_lib/flow.js';
 import { getCatalog, priceCart } from '../../_lib/catalog.js';
 import { lookupComuna } from '../../_lib/comunas.js';
 import { computeShipping } from '../../_lib/shipping-quote.js';
+import { estimateDelivery } from '../../_lib/delivery-estimate.js';
 
 export async function onRequest(context) {
   const { request, env } = context;
@@ -47,5 +48,8 @@ export async function onRequest(context) {
     return json({ ok: false, error: s.error || 'No pudimos cotizar el envío.' }, 200);
   }
 
-  return json({ ok: true, costo: s.costo, servicio: s.servicio, comuna: found.comuna });
+  return json({
+    ok: true, costo: s.costo, servicio: s.servicio, comuna: found.comuna,
+    entrega: estimateDelivery(found.comuna),   // ventana estimada de llegada
+  });
 }

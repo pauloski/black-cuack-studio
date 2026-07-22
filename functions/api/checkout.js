@@ -9,6 +9,7 @@ import { getCatalog, priceCart, buildSubject, seedUnits } from '../_lib/catalog.
 import { validateShipping } from '../_lib/shipping.js';
 import { reserveCart, releaseCart, lazySeed } from '../_lib/stock.js';
 import { computeShipping, FALLBACK_SHIPPING } from '../_lib/shipping-quote.js';
+import { estimateDelivery } from '../_lib/delivery-estimate.js';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
@@ -178,6 +179,11 @@ export async function onRequest(context) {
         lines: priced.lines,
         // Datos ya normalizados por validateShipping (RUT con formato, comuna canónica).
         shipping: { ...ship.shipping, courier: 'Chilexpress', metodo: 'domicilio', modalidad: 'Despacho a domicilio', costo: shipCost, servicio: shipService },
+        // Ventana de entrega estimada al momento de la compra (preparación + tránsito).
+        entrega: estimateDelivery(ship.shipping.comuna),
+        // Estado de despacho (separado del de pago). Etapa B: confirm lo pasa a
+        // 'en_preparacion' al aprobarse el pago, y el admin a 'despachado'.
+        fulfillment: 'pendiente_pago',
         status: 'pending',
         // 'reserved' → el stock ya se descontó. confirm lo pasa a committed/released.
         stock_state: 'reserved',
@@ -185,6 +191,10 @@ export async function onRequest(context) {
       }),
       { expirationTtl: 60 * 60 * 24 * 90 }
     );
+    // Índice commerceOrder → token, para la página de seguimiento del cliente.
+    // Best-effort: si falla, la orden igual quedó guardada (solo no se puede
+    // buscar por número hasta reindexar).
+    await env.ORDERS_KV.put('ordercode:' + commerceOrder, created.token, { expirationTtl: 60 * 60 * 24 * 90 }).catch(() => {});
   } catch (e) {
     console.error(
       '[checkout] CRÍTICO: no se pudo guardar la orden', commerceOrder,

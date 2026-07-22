@@ -31,7 +31,8 @@
       <p id="ghDetail">Estamos verificando el estado de tu transacción.</p>
       <p style="margin-top:12px"><strong>Despacho:</strong> a domicilio con Chilexpress — el envío ya está pagado. Cuando despachemos, recibirás el número de seguimiento.</p>
       <div style="margin-top:18px;display:flex;gap:12px;flex-wrap:wrap">
-        <a class="btn" href="tienda.html" data-hover><i data-lucide="shopping-bag"></i> Volver a la tienda</a>
+        <a id="ghTrack" class="btn" href="#" data-hover style="display:none"><i data-lucide="truck"></i> Seguir mi pedido</a>
+        <a class="btn secondary" href="tienda.html" data-hover><i data-lucide="shopping-bag"></i> Volver a la tienda</a>
         <a class="btn secondary" href="contacto.html" data-hover><i data-lucide="mail"></i> Contactar soporte</a>
       </div>
     </div>
@@ -87,6 +88,13 @@
     '<i data-lucide="' + v.icon + '" style="width:14px"></i> ' + status.toUpperCase();
   document.querySelector('#ghCard .vic').innerHTML = '<i data-lucide="' + v.icon + '"></i>';
   document.title = v.title + ' — BlackQuack';
+
+  /* Con pago aprobado, ofrece seguir el pedido por su número de orden. */
+  if (status === 'paid' && order) {
+    var track = document.getElementById('ghTrack');
+    track.href = 'seguimiento.html?order=' + encodeURIComponent(order);
+    track.style.display = '';
+  }
 
   /* Solo vaciamos el carrito con un pago aprobado. Si quedó pendiente, rechazado
      o ilegible, se conserva para que el cliente pueda reintentar. */

@@ -81,6 +81,9 @@ export async function onRequest(context) {
         ...(record || {}),
         status: paid ? 'paid' : status === FLOW_STATUS.REJECTED ? 'rejected'
           : status === FLOW_STATUS.CANCELED ? 'canceled' : 'pending',
+        // Estado de despacho: al aprobarse el pago entra a preparación; si se
+        // rechaza/anula, cancelado. Cualquier otro caso conserva el valor previo.
+        fulfillment: paid ? 'en_preparacion' : finalRejected ? 'cancelado' : (record?.fulfillment || 'pendiente_pago'),
         flow_status: status,
         flow_amount: payment?.amount ?? null,
         commerceOrder: payment?.commerceOrder ?? record?.commerceOrder ?? null,
