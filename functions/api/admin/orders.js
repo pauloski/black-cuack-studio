@@ -29,9 +29,10 @@ export async function onRequest({ request, env }) {
         email: o.email || null,
         amount: o.amount != null ? o.amount : null,
         amount_shipping: o.amount_shipping != null ? o.amount_shipping : null,
-        shipping: o.shipping || null,   // nombre, rut, teléfono, dirección, comuna, ...
+        courier: o.courier || null,     // 'blue' | 'chilexpress'
+        shipping: o.shipping || null,   // nombre, rut, teléfono, dirección/punto, comuna, metodo, ...
         entrega: o.entrega || null,
-        tracking: o.tracking ? { ot: o.tracking.ot || null, url: trackingUrl(o.tracking.ot) } : null,
+        tracking: o.tracking ? { ot: o.tracking.ot || null, url: trackingUrl(o.tracking.ot, o.courier) } : null,
         items: (o.lines || []).map((l) => ({ title: l.product_title, variant: l.variant_label || '', qty: l.qty })),
       });
     }

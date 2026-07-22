@@ -83,24 +83,31 @@
 
     var progress = (cancelled || pendingPay) ? '' : stepsHTML(d.fulfillment);
 
+    var retiro = d.metodo === 'retiro_punto';
+    var courierName = d.courierLabel || 'el courier';
     var rows = '';
     if (eta && !cancelled) rows += '<div class="r"><span class="k">Entrega estimada</span><span class="v">' + esc(eta) + '</span></div>';
-    if (d.comuna) rows += '<div class="r"><span class="k">Despacho a</span><span class="v">' + esc(d.comuna) + '</span></div>';
+    if (retiro && d.punto) rows += '<div class="r"><span class="k">Retiro en</span><span class="v">' + esc(d.punto) + (d.comuna ? '<br><span style="color:#9a9a9a">' + esc(d.comuna) + '</span>' : '') + '</span></div>';
+    else if (d.comuna) rows += '<div class="r"><span class="k">Despacho a</span><span class="v">' + esc(d.comuna) + '</span></div>';
     if (itemsTxt) rows += '<div class="r"><span class="k">Productos</span><span class="v">' + itemsTxt + '</span></div>';
     if (d.amount != null) rows += '<div class="r"><span class="k">Total pagado</span><span class="v">' + esc(CLP(d.amount)) + '</span></div>';
 
     var track = '';
     if (d.tracking && d.tracking.ot) {
       track = '<div class="sg-track">' +
-        '<div style="font-family:var(--font-title);font-weight:600;font-size:.8rem;color:#8a6d3b;margin-bottom:6px">N° DE SEGUIMIENTO CHILEXPRESS</div>' +
+        '<div style="font-family:var(--font-title);font-weight:600;font-size:.8rem;color:#8a6d3b;margin-bottom:6px">N° DE SEGUIMIENTO ' + esc(courierName.toUpperCase()) + '</div>' +
         '<div class="num">' + esc(d.tracking.ot) + '</div>' +
-        (d.tracking.url ? '<a href="' + esc(d.tracking.url) + '" target="_blank" rel="noopener"><i data-lucide="external-link"></i> Seguir en Chilexpress</a>' : '') +
+        (d.tracking.url ? '<a href="' + esc(d.tracking.url) + '" target="_blank" rel="noopener"><i data-lucide="external-link"></i> Seguir en ' + esc(courierName) + '</a>' : '') +
       '</div>';
     }
 
+    var nota = retiro
+      ? 'Preparamos y dejamos tu paquete en un plazo de 2 días hábiles. Cuando llegue a tu Punto Blue, retíralo con tu RUT. Los tiempos son estimados.'
+      : 'Preparamos y dejamos tu paquete en el courier en un plazo de 2 días hábiles. Los tiempos de entrega son estimados.';
+
     app.innerHTML = '<div class="sg-card">' + head + progress +
       (rows ? '<div class="sg-info">' + rows + '</div>' : '') + track +
-      (!cancelled && !pendingPay ? '<p class="sg-note">Preparamos y dejamos tu paquete en Chilexpress en un plazo de 2 días hábiles. Los tiempos de entrega son estimados.</p>' : '') +
+      (!cancelled && !pendingPay ? '<p class="sg-note">' + esc(nota) + '</p>' : '') +
       '<div style="margin-top:20px"><a class="sg-btn ghost" href="seguimiento.html"><i data-lucide="search"></i> Buscar otra orden</a></div>' +
     '</div>';
     icons();

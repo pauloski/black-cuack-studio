@@ -60,7 +60,10 @@ export function normalizePhone(input) {
 
 const MAX = { nombre: 80, direccion: 160, referencia: 120 };
 
-export function validateShipping(input) {
+export function validateShipping(input, opts = {}) {
+  // requireDireccion: domicilio necesita calle+número. requirePunto: retiro en Punto Blue.
+  const requireDireccion = opts.requireDireccion !== false; // default true (compat)
+  const requirePunto = !!opts.requirePunto;
   const errors = {};
   const out = {};
 
@@ -86,13 +89,17 @@ export function validateShipping(input) {
   }
 
   const direccion = String(input?.direccion || '').trim().replace(/\s+/g, ' ');
-  // Sin número, el courier no puede entregar.
-  if (direccion.length < 6 || direccion.length > MAX.direccion) {
-    errors.direccion = 'Ingresa calle y número.';
-  } else if (!/\d/.test(direccion)) {
-    errors.direccion = 'La dirección debe incluir el número.';
-  } else {
-    out.direccion = direccion;
+  if (requireDireccion) {
+    // Sin número, el courier no puede entregar a domicilio.
+    if (direccion.length < 6 || direccion.length > MAX.direccion) {
+      errors.direccion = 'Ingresa calle y número.';
+    } else if (!/\d/.test(direccion)) {
+      errors.direccion = 'La dirección debe incluir el número.';
+    } else {
+      out.direccion = direccion;
+    }
+  } else if (direccion) {
+    out.direccion = direccion.slice(0, MAX.direccion);
   }
 
   /* La comuna define la tarifa y la cobertura del courier: tiene que ser una
@@ -103,6 +110,16 @@ export function validateShipping(input) {
   } else {
     out.comuna = found.comuna;
     out.region = found.region;
+  }
+
+  // Punto Blue de retiro (para el método retiro_punto).
+  if (requirePunto) {
+    const punto = String(input?.punto || '').trim().replace(/\s+/g, ' ');
+    if (punto.length < 4 || punto.length > 200) {
+      errors.punto = 'Indica el Punto Blue de retiro (nombre y dirección).';
+    } else {
+      out.punto = punto;
+    }
   }
 
   const referencia = String(input?.referencia || '').trim().slice(0, MAX.referencia);

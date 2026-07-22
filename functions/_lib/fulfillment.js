@@ -21,17 +21,24 @@ export const FULFILLMENT_STEPS = [
   { key: 'entregado', label: 'Entregado' },
 ];
 
-/* Deep-link al seguimiento público de Chilexpress por número de OT. Verificar el
-   formato si Chilexpress cambia su sitio; si falla, el cliente igual tiene el número. */
-export function trackingUrl(ot) {
-  return ot
-    ? 'https://www.chilexpress.cl/Views/ChilexpressCL/Resultado-busqueda.aspx?DATA=' + encodeURIComponent(ot)
-    : null;
+export const COURIER_LABELS = { chilexpress: 'Chilexpress', blue: 'Blue Express' };
+
+/* Deep-link al seguimiento público por número de OT/OS, según courier. Verificar
+   los formatos si cambian; si fallan, el cliente igual tiene el número. */
+export function trackingUrl(ot, courier) {
+  if (!ot) return null;
+  if (courier === 'blue') {
+    // Seguimiento Blue Express por N° de OS. (Verificar el deep-link exacto.)
+    return 'https://www.blue.cl/seguimiento?os=' + encodeURIComponent(ot);
+  }
+  return 'https://www.chilexpress.cl/Views/ChilexpressCL/Resultado-busqueda.aspx?DATA=' + encodeURIComponent(ot);
 }
 
 /* Vista PÚBLICA de una orden (sin RUT, dirección, teléfono ni email). La consume
    la página de seguimiento del cliente. */
 export function publicOrderView(o) {
+  const courier = o.courier || null;             // 'chilexpress' | 'blue'
+  const metodo = (o.shipping && o.shipping.metodo) || null; // 'domicilio' | 'retiro_punto'
   return {
     order: o.commerceOrder || null,
     pago: o.status || null,                    // paid | pending | rejected | ...
@@ -39,7 +46,11 @@ export function publicOrderView(o) {
     fulfillmentLabel: FULFILLMENT_LABELS[o.fulfillment] || null,
     entrega: o.entrega || null,                // ventana estimada { desde, hasta, labels }
     comuna: (o.shipping && o.shipping.comuna) || null,
-    tracking: o.tracking ? { ot: o.tracking.ot || null, url: trackingUrl(o.tracking && o.tracking.ot) } : null,
+    metodo,                                     // domicilio / retiro_punto
+    punto: (o.shipping && o.shipping.punto) || null, // Punto Blue (si retiro)
+    courier,
+    courierLabel: COURIER_LABELS[courier] || null,
+    tracking: o.tracking ? { ot: o.tracking.ot || null, url: trackingUrl(o.tracking && o.tracking.ot, courier) } : null,
     amount: o.amount != null ? o.amount : null,
     items: (o.lines || []).map((l) => ({ title: l.product_title, variant: l.variant_label || '', qty: l.qty })),
     created_at: o.created_at || null,

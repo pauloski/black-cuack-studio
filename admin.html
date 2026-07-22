@@ -246,6 +246,7 @@
     if (!orders.length) { ordersResult.innerHTML = '<p class="muted" style="margin-top:14px">No hay pedidos pagados.</p>'; return; }
     var rows = orders.map(function (o) {
       var sh = o.shipping || {};
+      var destino = sh.metodo === 'retiro_punto' ? ('📦 Retiro: ' + (sh.punto || '')) : (sh.direccion || '');
       var items = (o.items || []).map(function (i) { return esc(i.title) + (i.variant ? ' (' + esc(i.variant) + ')' : '') + ' ×' + i.qty; }).join('<br>');
       var estado = esc(o.fulfillmentLabel || STATE_LABEL[o.fulfillment] || o.fulfillment || '—');
       var action = '';
@@ -261,7 +262,7 @@
       }
       return '<tr>' +
         '<td><code>' + esc(o.order) + '</code><br><span class="muted" style="font-size:.75rem">' + esc(String(o.confirmed_at || o.created_at || '').slice(0, 10)) + '</span></td>' +
-        '<td>' + esc(sh.nombre || '') + '<br><span class="muted">' + esc(sh.comuna || '') + '</span><br><span class="muted" style="font-size:.78rem">' + esc(sh.direccion || '') + '</span>' + (sh.telefono ? '<br><span class="muted" style="font-size:.78rem">' + esc(sh.telefono) + '</span>' : '') + '</td>' +
+        '<td>' + esc(sh.nombre || '') + '<br><span class="muted">' + esc(sh.comuna || '') + '</span><br><span class="muted" style="font-size:.78rem">' + esc(destino) + '</span>' + (sh.telefono ? '<br><span class="muted" style="font-size:.78rem">' + esc(sh.telefono) + '</span>' : '') + '</td>' +
         '<td style="font-size:.8rem">' + items + '</td>' +
         '<td><strong>' + estado + '</strong></td>' +
         '<td>' + action + '</td></tr>';

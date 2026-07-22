@@ -51,6 +51,6 @@ export async function onRequest({ request, env }) {
     order: order.commerceOrder,
     fulfillment: order.fulfillment,
     fulfillmentLabel: FULFILLMENT_LABELS[order.fulfillment] || null,
-    tracking: order.tracking ? { ot: order.tracking.ot || null, url: trackingUrl(order.tracking.ot) } : null,
+    tracking: order.tracking ? { ot: order.tracking.ot || null, url: trackingUrl(order.tracking.ot, order.courier) } : null,
   });
 }

@@ -10,6 +10,8 @@ import { validateShipping } from '../_lib/shipping.js';
 import { reserveCart, releaseCart, lazySeed } from '../_lib/stock.js';
 import { computeShipping, FALLBACK_SHIPPING } from '../_lib/shipping-quote.js';
 import { estimateDelivery } from '../_lib/delivery-estimate.js';
+import { bluePickupRate } from '../_lib/blue-rates.js';
+import { methodById, isMethodEnabled } from '../_lib/shipping-methods.js';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
@@ -48,9 +50,19 @@ export async function onRequest(context) {
     return json({ error: 'Necesitamos un email válido.', fields: { email: 'Email inválido.' } }, 400);
   }
 
-  /* Sin datos de despacho válidos no se cobra: un pago sin dirección es un
-     pedido que no se puede enviar y que hay que reembolsar a mano. */
-  const ship = validateShipping(payload?.shipping);
+  /* Método de despacho (según el flag del ambiente). */
+  const methodId = String(payload?.method || 'blue_retiro');
+  const method = methodById(methodId);
+  if (!method || !isMethodEnabled(env, methodId)) {
+    return json({ error: 'Método de despacho no disponible.' }, 400);
+  }
+
+  /* Sin datos de despacho válidos no se cobra. Domicilio exige dirección; retiro
+     en Punto Blue exige el punto. */
+  const ship = validateShipping(payload?.shipping, {
+    requireDireccion: !!method.needsDireccion,
+    requirePunto: !!method.needsPunto,
+  });
   if (!ship.ok) {
     return json({ error: 'Revisa los datos de despacho.', fields: ship.errors }, 400);
   }
@@ -101,24 +113,33 @@ export async function onRequest(context) {
      - Sin cobertura → no se cobra: se libera la reserva y se avisa.
      - Chilexpress caído → tarifa de respaldo para no perder la venta (se registra). */
   let shipCost, shipService;
-  try {
-    const s = await computeShipping(env, catalog, ship.shipping.comuna, priced.lines, priced.amount);
-    if (!s.ok && s.noCoverage) {
+  if (method.courier === 'blue') {
+    // Retiro en Punto Blue: precio de TABLA (Blue no tiene API).
+    const r = bluePickupRate(ship.shipping.comuna);
+    if (!r.ok) {
       await releaseCart(env.ORDERS_DB, priced.lines, commerceOrder).catch(() => {});
-      return json({ error: s.error, fields: { comuna: 'Chilexpress no despacha a esta comuna.' } }, 409);
+      return json({ error: r.error, fields: { comuna: r.error } }, 409);
     }
-    if (!s.ok) {
-      console.warn('[checkout] cotización de envío falló, usando respaldo:', s.error, JSON.stringify(s.errors || ''));
-      shipCost = FALLBACK_SHIPPING;
-      shipService = 'Chilexpress';
-    } else {
-      shipCost = s.costo;
-      shipService = s.servicio;
+    shipCost = r.costo;
+    shipService = 'Punto Blue';
+  } else {
+    // Domicilio Chilexpress: cotización en vivo, con tarifa de respaldo si falla.
+    try {
+      const s = await computeShipping(env, catalog, ship.shipping.comuna, priced.lines, priced.amount);
+      if (!s.ok && s.noCoverage) {
+        await releaseCart(env.ORDERS_DB, priced.lines, commerceOrder).catch(() => {});
+        return json({ error: s.error, fields: { comuna: 'Chilexpress no despacha a esta comuna.' } }, 409);
+      }
+      if (!s.ok) {
+        console.warn('[checkout] cotización de envío falló, usando respaldo:', s.error, JSON.stringify(s.errors || ''));
+        shipCost = FALLBACK_SHIPPING; shipService = 'Chilexpress';
+      } else {
+        shipCost = s.costo; shipService = s.servicio;
+      }
+    } catch (e) {
+      console.warn('[checkout] cotización de envío con excepción, usando respaldo:', e.message);
+      shipCost = FALLBACK_SHIPPING; shipService = 'Chilexpress';
     }
-  } catch (e) {
-    console.warn('[checkout] cotización de envío con excepción, usando respaldo:', e.message);
-    shipCost = FALLBACK_SHIPPING;
-    shipService = 'Chilexpress';
   }
 
   const amountProducts = priced.amount;
@@ -141,7 +162,7 @@ export async function onRequest(context) {
        quedan en nuestro KV, asociados al commerceOrder. */
     optional: JSON.stringify({
       items: priced.lines.map((l) => l.id + 'x' + l.qty).join(','),
-      envio: 'Domicilio · Chilexpress ' + shipService + ' $' + shipCost,
+      envio: (method.courier === 'blue' ? 'Retiro Punto Blue' : 'Domicilio Chilexpress') + ' · ' + shipService + ' $' + shipCost,
       comuna: ship.shipping.comuna
     })
   };
@@ -177,8 +198,15 @@ export async function onRequest(context) {
         amount_products: amountProducts,
         amount_shipping: shipCost,
         lines: priced.lines,
-        // Datos ya normalizados por validateShipping (RUT con formato, comuna canónica).
-        shipping: { ...ship.shipping, courier: 'Chilexpress', metodo: 'domicilio', modalidad: 'Despacho a domicilio', costo: shipCost, servicio: shipService },
+        // Courier normalizado (para tracking) y datos de despacho.
+        courier: method.courier,   // 'blue' | 'chilexpress'
+        shipping: {
+          ...ship.shipping,        // incluye punto (retiro) o direccion (domicilio)
+          courier: method.courier === 'blue' ? 'Blue Express' : 'Chilexpress',
+          metodo: method.metodo,   // retiro_punto | domicilio
+          modalidad: method.label,
+          costo: shipCost, servicio: shipService,
+        },
         // Ventana de entrega estimada al momento de la compra (preparación + tránsito).
         entrega: estimateDelivery(ship.shipping.comuna),
         // Estado de despacho (separado del de pago). Etapa B: confirm lo pasa a
