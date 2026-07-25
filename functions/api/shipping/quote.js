@@ -9,7 +9,7 @@
 import { json } from '../../_lib/flow.js';
 import { getCatalog, priceCart } from '../../_lib/catalog.js';
 import { lookupComuna } from '../../_lib/comunas.js';
-import { computeShipping } from '../../_lib/shipping-quote.js';
+import { computeShipping, cartWeightKg } from '../../_lib/shipping-quote.js';
 import { estimateDelivery } from '../../_lib/delivery-estimate.js';
 import { bluePickupRate } from '../../_lib/blue-rates.js';
 import { methodById, isMethodEnabled } from '../../_lib/shipping-methods.js';
@@ -32,13 +32,20 @@ export async function onRequest({ request, env }) {
 
   const entrega = estimateDelivery(found.comuna);
 
-  // ---- Blue Express: retiro en Punto Blue (tabla) ----
+  // ---- Blue Express: retiro en Punto Blue (tabla por zona × talla) ----
   if (method.courier === 'blue') {
-    const r = bluePickupRate(found.comuna);
+    // La talla depende del peso del carrito, así que necesitamos el catálogo.
+    let catalog;
+    try { catalog = await getCatalog(env); }
+    catch (e) { console.error('[quote] catálogo:', e.message); return json({ ok: false, error: 'No pudimos validar el catálogo.' }, 502); }
+    const priced = priceCart(payload?.items, catalog);
+    if (priced.error) return json({ ok: false, error: priced.error }, 400);
+
+    const r = bluePickupRate(found.comuna, cartWeightKg(catalog, priced.lines));
     if (!r.ok) return json({ ok: false, error: r.error }, 200);
     return json({
       ok: true, courier: 'blue', metodo: 'retiro_punto',
-      costo: r.costo, servicio: 'Punto Blue', comuna: found.comuna, entrega,
+      costo: r.costo, servicio: 'Punto Blue', talla: r.talla, comuna: found.comuna, entrega,
     });
   }
 

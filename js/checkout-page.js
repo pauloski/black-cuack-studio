@@ -45,8 +45,11 @@
   var quoting = false;
   var F = restoreForm();  // datos del formulario (persistidos en sessionStorage)
 
-  var BLUE_MAP = 'https://mapa-pickup.blue.cl/';                                 // mapa embebible de Puntos Blue
-  var BLUE_FINDER = 'https://www.blue.cl/lockers-puntos/encuentra-tu-punto';     // buscador oficial (fallback)
+  var BLUE_FINDER = 'https://www.blue.cl/lockers-puntos/encuentra-tu-punto';     // buscador oficial (link externo)
+  var puntos = [];          // Puntos Blue de la comuna elegida (del endpoint /api/bluexpress/puntos)
+  var puntosComuna = '';    // comuna para la que se cargó `puntos` (evita refetch)
+  var puntosLoading = false;
+  var DIAS = ['Domingo', 'Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes', 'Sabado']; // getDay() → día Blue
 
   /* ---------------- carga ---------------- */
   function readCart() {
@@ -128,7 +131,7 @@
     F = {
       email: val('email'), nombre: val('nombre'), rut: val('rut'), telefono: val('telefono'),
       region: val('region'), comuna: val('comuna'), direccion: val('direccion'), referencia: val('referencia'),
-      punto: val('punto'), method: activeMethod ? activeMethod.id : (F.method || '')
+      punto: val('punto'), puntoId: val('puntoId'), method: activeMethod ? activeMethod.id : (F.method || '')
     };
     try { sessionStorage.setItem('bq_checkout_form', JSON.stringify(F)); } catch (e) {}
   }
@@ -268,8 +271,14 @@
     wire();
     showStep(step);
     icons();
-    // Si venía una comuna guardada, re-cotiza para no mostrar el envío en blanco.
-    if (val('comuna')) requestQuote();
+    // Con comuna guardada: recarga puntos (Blue), reponiendo el punto elegido, y re-cotiza.
+    if (val('comuna')) {
+      if (activeMethod && activeMethod.needsPunto) {
+        if (F.puntoId) setPunto(F.puntoId, F.punto);   // onRegionChange lo limpió; lo reponemos antes de cargar
+        loadPuntos(val('comuna'));
+      }
+      requestQuote();
+    }
   }
 
   /* ---------------- regiones / comunas ---------------- */
@@ -283,20 +292,42 @@
   function onRegionChange() {
     var rSel = document.querySelector('[name="region"]'), cSel = document.querySelector('[name="comuna"]');
     var r = comunas[rSel.value];
+    // Cambió la región → la comuna y el punto anteriores dejan de aplicar.
+    if (activeMethod && activeMethod.needsPunto) resetPuntos();
     if (!r) { cSel.innerHTML = '<option value="">Elige región primero</option>'; cSel.disabled = true; resetShip(); return; }
     cSel.innerHTML = '<option value="">Selecciona…</option>' +
       r.comunas.map(function (c) { return '<option value="' + esc(c) + '">' + esc(c) + '</option>'; }).join('');
     cSel.disabled = false; resetShip();
   }
+  function onComunaChange() {
+    saveForm();
+    if (activeMethod && activeMethod.needsPunto) {
+      // Nueva comuna → punto anterior inválido; carga los puntos de la nueva.
+      setPunto('', '');
+      var comuna = val('comuna');
+      if (comuna) loadPuntos(comuna); else resetPuntos();
+    }
+    requestQuote();
+  }
 
   /* ---------------- método de despacho (Blue-retiro / Chilexpress-domicilio) ---------------- */
+  function methodPriceHint(m) {
+    return m.courier === 'blue' ? 'Desde $1.900' : 'A tu dirección';
+  }
   function methodSelHTML() {
     if (!methods || methods.length <= 1) return '';
-    return '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px">' + methods.map(function (m) {
+    return '<div class="co-methods">' + methods.map(function (m) {
       var active = activeMethod && m.id === activeMethod.id;
-      return '<button type="button" data-method="' + esc(m.id) + '" style="flex:1;min-width:160px;text-align:left;padding:13px 14px;border:1.5px solid ' + (active ? 'var(--color-brand)' : 'var(--border-soft)') + ';border-radius:12px;background:' + (active ? '#fff7ec' : '#fff') + '">' +
-        '<div style="font-family:var(--font-title);font-weight:700;font-size:.9rem;display:flex;align-items:center;gap:7px"><i data-lucide="' + esc(m.icon || 'package') + '" style="width:16px;height:16px;color:var(--color-brand)"></i>' + esc(m.label) + '</div>' +
-        '<div style="font-size:.78rem;color:#8a8a8a;margin-top:3px">' + esc(m.descripcion || '') + '</div>' +
+      var cheap = m.courier === 'blue';
+      return '<button type="button" class="co-method' + (active ? ' active' : '') + '" data-method="' + esc(m.id) + '">' +
+        (cheap ? '<span class="co-method-badge"><i data-lucide="sparkles"></i> Más barato</span>' : '') +
+        '<span class="co-method-ico"><i data-lucide="' + esc(m.icon || 'package') + '"></i></span>' +
+        '<span class="co-method-main">' +
+          '<span class="co-method-title">' + esc(m.label) + '</span>' +
+          '<span class="co-method-desc">' + esc(m.descripcion || '') + '</span>' +
+          '<span class="co-method-price">' + esc(methodPriceHint(m)) + '</span>' +
+        '</span>' +
+        '<span class="co-method-check"><i data-lucide="check"></i></span>' +
       '</button>';
     }).join('') + '</div>';
   }
@@ -312,20 +343,25 @@
   function methodFieldsHTML() {
     if (!activeMethod) return '';
     if (activeMethod.needsPunto) {
-      return '<div class="co-field"><label>Elige tu Punto Blue de retiro</label>' +
-          '<div style="border:1.5px solid var(--border-soft);border-radius:11px;overflow:hidden">' +
-            '<iframe src="' + BLUE_MAP + '" title="Mapa de Puntos Blue" style="width:100%;height:330px;border:0;display:block" loading="lazy"></iframe>' +
-          '</div>' +
-          '<small style="color:#8a8a8a;font-size:.8rem;display:block;margin-top:8px">Busca un Punto Blue que <b>reciba paquetes</b> 📦 y cópialo abajo. ' +
-            '<a href="' + BLUE_FINDER + '" target="_blank" rel="noopener" style="color:var(--color-brand);font-weight:600">Abrir buscador ↗</a></small>' +
-        '</div>' +
-        field('punto', 'Tu Punto Blue elegido', { ph: 'Ej: Punto Blue Copec — Av. X 123' });
+      // La lista de puntos la puebla renderPuntos() según región+comuna elegidas.
+      return '<div class="co-punto-block" data-field="punto">' +
+          '<span class="co-punto-label">Elige tu Punto Blue de retiro</span>' +
+          '<div id="coPuntos"></div>' +
+          '<input type="hidden" name="punto" value="' + esc(F.punto || '') + '">' +
+          '<input type="hidden" name="puntoId" value="' + esc(F.puntoId || '') + '">' +
+          '<small class="co-err" data-for="punto"></small>' +
+        '</div>';
     }
     return field('direccion', 'Dirección — calle y número', { autocomplete: 'street-address', ph: 'Av. Los Carrera 1234, depto 5B' });
   }
   function renderMethodFields() {
     var c = document.getElementById('coMethodFields');
-    if (c) { c.innerHTML = methodFieldsHTML(); icons(); }
+    if (!c) return;
+    c.innerHTML = methodFieldsHTML(); icons();
+    if (activeMethod && activeMethod.needsPunto) {
+      var comuna = val('comuna');
+      if (comuna) loadPuntos(comuna); else renderPuntos();
+    }
   }
   function setActiveMethod(id) {
     var m = methods.filter(function (x) { return x.id === id; })[0];
@@ -337,6 +373,99 @@
     resetShip();
     if (val('comuna')) requestQuote();
   }
+
+  /* ---------------- Puntos Blue de retiro ---------------- */
+  function horarioHoy(p) {
+    var hoy = DIAS[new Date().getDay()];
+    var a = (p.horarios || []).filter(function (h) { return h.day === hoy; })[0];
+    if (!a) return { txt: 'Cerrado hoy', open: false };
+    return { txt: a.startTime + '–' + a.endTime, open: true };
+  }
+  function mapsLink(p) {
+    var q = (p.lat != null && p.lng != null) ? (p.lat + ',' + p.lng)
+      : ((p.direccion && p.direccion.completa) || p.nombre || 'Blue Express');
+    return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(q);
+  }
+  function puntoLabel(p) {
+    var dir = (p.direccion && p.direccion.completa) || '';
+    return p.nombre + (dir ? ' — ' + dir : '');
+  }
+  function setPunto(id, label) {
+    var hi = document.querySelector('[name="puntoId"]'), hp = document.querySelector('[name="punto"]');
+    if (hi) hi.value = id || '';
+    if (hp) hp.value = label || '';
+    saveForm();
+  }
+  async function loadPuntos(comuna) {
+    // Cache por comuna: no re-consulta si ya la tenemos.
+    if (puntosComuna === comuna && puntos.length) { renderPuntos(); preselectPunto(); return; }
+    puntos = []; puntosComuna = comuna; puntosLoading = true; renderPuntos();
+    try {
+      var res = await fetch('/api/bluexpress/puntos?comuna=' + encodeURIComponent(comuna) + '&limit=200');
+      var d = await res.json().catch(function () { return null; });
+      // Solo puntos donde el cliente puede RETIRAR su paquete.
+      if (d && d.ok && Array.isArray(d.puntos)) puntos = d.puntos.filter(function (p) { return p.permiteRetiro !== false; });
+    } catch (e) { /* estado de error se muestra en renderPuntos */ }
+    puntosLoading = false; renderPuntos(); preselectPunto();
+  }
+  function puntoCardHTML(p) {
+    var h = horarioHoy(p);
+    var copec = (p.tipo || '').toLowerCase().indexOf('copec') !== -1;
+    var sel = String(p.id) === String(val('puntoId'));
+    var dir = (p.direccion && p.direccion.completa) || '';
+    return '<label class="co-punto' + (sel ? ' sel' : '') + '" data-punto="' + esc(p.id) + '">' +
+      '<input type="radio" name="_puntoRadio" value="' + esc(p.id) + '"' + (sel ? ' checked' : '') + '>' +
+      '<span class="co-punto-body">' +
+        '<span class="co-punto-top"><span class="co-punto-name">' + esc(p.nombre) + '</span>' +
+          '<span class="co-punto-tag' + (copec ? ' copec' : '') + '">' + (copec ? 'Copec' : 'Punto Blue') + '</span></span>' +
+        (dir ? '<span class="co-punto-addr">' + esc(dir) + '</span>' : '') +
+        '<span class="co-punto-meta">' +
+          '<span class="co-punto-hours ' + (h.open ? 'open' : 'closed') + '"><i data-lucide="clock"></i>' + esc(h.open ? 'Hoy ' + h.txt : h.txt) + '</span>' +
+          '<a class="co-punto-map" href="' + esc(mapsLink(p)) + '" target="_blank" rel="noopener"><i data-lucide="map-pin"></i>Ver en mapa</a>' +
+        '</span>' +
+      '</span>' +
+    '</label>';
+  }
+  function renderPuntos(filter) {
+    var c = document.getElementById('coPuntos'); if (!c) return;
+    var comuna = val('comuna');
+    if (!comuna) { c.innerHTML = '<div class="co-punto-state"><i data-lucide="map-pin"></i>Elige región y comuna para ver los Puntos Blue disponibles.</div>'; icons(); return; }
+    if (puntosLoading) { c.innerHTML = '<div class="co-punto-state"><span class="co-spin" style="border-color:rgba(243,146,0,.3);border-top-color:var(--color-brand)"></span> Buscando puntos en ' + esc(comuna) + '…</div>'; icons(); return; }
+    if (!puntos.length) {
+      c.innerHTML = '<div class="co-punto-state"><i data-lucide="frown"></i>No hay Puntos Blue en ' + esc(comuna) + '. Prueba una comuna cercana o revisa el ' +
+        '<a href="' + BLUE_FINDER + '" target="_blank" rel="noopener" style="color:var(--color-brand);font-weight:600">buscador oficial ↗</a>.</div>';
+      icons(); return;
+    }
+    var q = (filter || '').trim().toLowerCase();
+    var list = q ? puntos.filter(function (p) {
+      return (p.nombre + ' ' + ((p.direccion && p.direccion.completa) || '')).toLowerCase().indexOf(q) !== -1;
+    }) : puntos;
+    var search = puntos.length > 6 ? '<input class="co-punto-search" id="coPuntoSearch" placeholder="Buscar por nombre o dirección…" value="' + esc(filter || '') + '">' : '';
+    var count = '<div class="co-punto-count">' + list.length + ' punto' + (list.length === 1 ? '' : 's') + ' disponible' + (list.length === 1 ? '' : 's') + ' en ' + esc(comuna) + '</div>';
+    c.innerHTML = search + count + '<div class="co-punto-list">' + list.map(puntoCardHTML).join('') + '</div>';
+    icons();
+    // Reponer el foco en el buscador tras el re-render.
+    var sb = document.getElementById('coPuntoSearch');
+    if (sb && q) { sb.focus(); sb.setSelectionRange(sb.value.length, sb.value.length); }
+  }
+  function preselectPunto() {
+    // Si el punto guardado ya no está en la comuna actual, límpialo.
+    var id = val('puntoId');
+    if (id && !puntos.some(function (p) { return String(p.id) === String(id); })) setPunto('', '');
+    toggleToPay();
+  }
+  function selectPunto(id) {
+    var p = puntos.filter(function (x) { return String(x.id) === String(id); })[0];
+    if (!p) return;
+    setPunto(p.id, puntoLabel(p));
+    setErr('punto', '');
+    // Marca visual sin re-render (conserva el scroll de la lista).
+    document.querySelectorAll('.co-punto').forEach(function (el) {
+      el.classList.toggle('sel', el.getAttribute('data-punto') === String(id));
+    });
+    toggleToPay();
+  }
+  function resetPuntos() { puntos = []; puntosComuna = ''; setPunto('', ''); renderPuntos(); }
 
   /* ---------------- cotización de envío ---------------- */
   function resetShip() { shipping = { cost: null, servicio: '', ok: false }; renderShip(); refreshSummary(); toggleToPay(); }
@@ -380,7 +509,10 @@
     renderShip(); refreshSummary(); toggleToPay();
   }
   function toggleToPay() {
-    var btn = document.getElementById('coToPay'); if (btn) btn.disabled = !(shipping.ok && !quoting);
+    // Blue exige además haber elegido un Punto Blue de la lista.
+    var needPunto = activeMethod && activeMethod.needsPunto;
+    var puntoOk = !needPunto || (val('puntoId') && val('punto'));
+    var btn = document.getElementById('coToPay'); if (btn) btn.disabled = !(shipping.ok && !quoting && puntoOk);
   }
   function refreshSummary() {
     // Reemplaza solo el aside de resumen (evita perder foco del formulario).
@@ -425,7 +557,7 @@
     ['comuna', 'direccion', 'punto'].forEach(function (n) { setErr(n, ''); });
     if (!val('comuna')) { setErr('comuna', 'Selecciona tu comuna.'); ok = false; }
     if (activeMethod && activeMethod.needsPunto) {
-      if (val('punto').length < 4) { setErr('punto', 'Indica tu Punto Blue de retiro (búscalo en el mapa).'); ok = false; }
+      if (val('punto').length < 4) { setErr('punto', 'Elige tu Punto Blue de retiro de la lista.'); ok = false; }
     } else {
       var dir = val('direccion'); if (dir.length < 6 || !/\d/.test(dir)) { setErr('direccion', 'Ingresa calle y número.'); ok = false; }
     }
@@ -464,7 +596,7 @@
         body: JSON.stringify({
           email: val('email'), items: lineItems(),
           method: activeMethod ? activeMethod.id : 'blue_retiro',
-          shipping: { nombre: val('nombre'), rut: val('rut'), telefono: val('telefono'), comuna: val('comuna'), referencia: val('referencia'), direccion: val('direccion'), punto: val('punto') }
+          shipping: { nombre: val('nombre'), rut: val('rut'), telefono: val('telefono'), comuna: val('comuna'), referencia: val('referencia'), direccion: val('direccion'), punto: val('punto'), puntoId: val('puntoId') }
         })
       });
       var data = await res.json().catch(function () { return null; });
@@ -494,20 +626,17 @@
     var rSel = document.querySelector('[name="region"]');
     if (rSel) rSel.addEventListener('change', onRegionChange);
     var cSel = document.querySelector('[name="comuna"]');
-    if (cSel) cSel.addEventListener('change', requestQuote);
+    if (cSel) cSel.addEventListener('change', onComunaChange);
     // Formatea RUT al salir.
     var rut = document.querySelector('[name="rut"]');
     if (rut) rut.addEventListener('blur', function () { if (rut.value.trim()) rut.value = fmtRut(rut.value); });
-    // Best-effort: si el widget de mapa de Blue emite el punto elegido, autocompletamos.
-    window.addEventListener('message', function (e) {
-      if (String(e.origin || '').indexOf('blue.cl') === -1) return;
-      var d = e.data, text = '';
-      if (d && typeof d === 'object') {
-        text = d.nombre || d.name || d.label || d.punto || '';
-        var dir = d.direccion || d.address || d.direccion_completa || '';
-        if (dir) text += (text ? ' — ' : '') + dir;
-      } else if (typeof d === 'string' && d.length > 3 && d.length < 200) { text = d; }
-      if (text) { var pf = document.querySelector('[name="punto"]'); if (pf) { pf.value = text; saveForm(); if (val('comuna')) requestQuote(); } }
+    // Buscador dentro de la lista de Puntos Blue (delegado, sobrevive re-renders).
+    app.addEventListener('input', function (e) {
+      if (e.target && e.target.id === 'coPuntoSearch') renderPuntos(e.target.value);
+    });
+    // Selección de un Punto Blue de la lista.
+    app.addEventListener('change', function (e) {
+      if (e.target && e.target.name === '_puntoRadio') selectPunto(e.target.value);
     });
     // Navegación (delegada).
     app.addEventListener('click', function (e) {

@@ -120,6 +120,9 @@ export function validateShipping(input, opts = {}) {
     } else {
       out.punto = punto;
     }
+    // Id del Punto Blue elegido (para el courier / admin), si el frontend lo manda.
+    const puntoId = String(input?.puntoId || '').replace(/[^0-9]/g, '').slice(0, 12);
+    if (puntoId) out.puntoId = puntoId;
   }
 
   const referencia = String(input?.referencia || '').trim().slice(0, MAX.referencia);

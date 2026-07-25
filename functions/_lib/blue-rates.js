@@ -1,38 +1,62 @@
-/* Tarifas de "Retiro en Punto Blue" (Blue Express) por ZONA de destino.
+/* Tarifas de "Retiro en Punto Blue" (Blue Express) — Programa Emprendedor.
 
-   Blue Express no expone un API abierto, así que el retiro en punto se cobra con
-   esta TABLA que define BlackQuack (cotizando en app.bluex.cl). Como los productos
-   son chicos (talla XS/S), el precio depende sobre todo de la ZONA de destino.
+   Blue Express no expone un API abierto, así que el retiro se cobra con esta
+   TABLA. Usamos las tarifas del programa "Emprendedor de Regiones" en modalidad
+   PUNTO A PUNTO (dejar y retirar en Puntos Blue), que es exactamente nuestro caso
+   y el nivel más económico. Requiere estar registrado como comercio en blue.cl.
 
-   ⚠️ VALORES DE EJEMPLO — reemplazar por los reales cotizados en app.bluex.cl. */
+   El precio depende de dos cosas:
+     - TALLA del envío, según el peso del carrito (XS/S/M/L).
+     - ZONA de destino, relativa al origen (Quilpué, Región de Valparaíso).
+
+   Origen fijo: Quilpué. Si algún día cambia, cambia el mapa de zonas de blueZone. */
 
 import { lookupComuna, normalize } from './comunas.js';
 
-// Precio (CLP) del retiro en punto por zona, relativo al origen (Quilpué).
-export const BLUE_RATES = {
-  local:   2900,  // Valparaíso + RM (cerca del origen)
-  centro:  3900,  // O'Higgins, Maule, Ñuble, Coquimbo
-  sur:     4900,  // Biobío, Araucanía, Los Ríos, Los Lagos
-  norte:   4900,  // Atacama, Antofagasta
-  extremo: 6900,  // Arica, Tarapacá, Aysén, Magallanes
-};
-
-/* Zona de una región de destino (robusto a tildes/nombres largos). */
-export function blueZone(region) {
-  const r = normalize(region);
-  if (r.includes('valparaiso') || r.includes('metropolitana')) return 'local';
-  if (r.includes('libertador') || r.includes('ohiggins') || r.includes('maule') || r.includes('nuble') || r.includes('coquimbo')) return 'centro';
-  if (r.includes('biobio') || r.includes('araucania') || r.includes('rios') || r.includes('lagos')) return 'sur';
-  if (r.includes('atacama') || r.includes('antofagasta')) return 'norte';
-  if (r.includes('arica') || r.includes('tarapaca') || r.includes('aisen') || r.includes('aysen') || r.includes('magallanes')) return 'extremo';
-  return 'centro'; // fallback
+/* Talla Blue Express según el peso facturable del carrito (kg).
+   XS 0–0.5 · S ≤3 · M 3–6 · L 6–16. Sobre 16 kg cae a L (Blue no recibe más en
+   este flujo; el checkout no debería llegar ahí con productos chicos). */
+export function blueTalla(weightKg) {
+  const kg = Number(weightKg) || 0;
+  if (kg <= 0.5) return 'XS';
+  if (kg <= 3) return 'S';
+  if (kg <= 6) return 'M';
+  return 'L';
 }
 
-/* Costo del retiro en Punto Blue para una comuna. Devuelve
-   { ok:true, costo, zona } o { ok:false, error }. */
-export function bluePickupRate(comuna) {
+/* Zona de destino para el retiro punto-a-punto, desde Quilpué:
+     valpo   → misma región (Valparaíso), incluye Marga Marga, Viña, Valpo…
+     rm      → Región Metropolitana (Santiago)
+     extremo → Arica y Parinacota, Tarapacá, Aysén, Magallanes
+     otras   → resto de regiones (interregional estándar) */
+export function blueZone(region) {
+  const r = normalize(region);
+  if (r.includes('valparaiso')) return 'valpo';
+  if (r.includes('metropolitana')) return 'rm';
+  if (
+    r.includes('arica') || r.includes('tarapaca') ||
+    r.includes('aisen') || r.includes('aysen') || r.includes('magallanes')
+  ) return 'extremo';
+  return 'otras';
+}
+
+/* Precio (CLP) del retiro punto-a-punto: BLUE_RATES[zona][talla].
+   Fuente: programa "Emprendedor de Regiones" (Punto a Punto). */
+export const BLUE_RATES = {
+  valpo:   { XS: 1900, S: 2900, M: 3900, L: 4800 },   // dentro de la Región de Valparaíso
+  rm:      { XS: 2500, S: 3900, M: 4900, L: 7900 },   // Valparaíso → Santiago (RM)
+  otras:   { XS: 2900, S: 6900, M: 8500, L: 11500 },  // interregional estándar
+  extremo: { XS: 2900, S: 6900, M: 8500, L: 11500 },  // hacia zonas extremas
+};
+
+/* Costo del retiro en Punto Blue para una comuna y un peso de carrito.
+   Devuelve { ok:true, costo, zona, talla } o { ok:false, error }. */
+export function bluePickupRate(comuna, weightKg = 0.5) {
   const found = lookupComuna(comuna);
   if (!found) return { ok: false, error: 'Selecciona una comuna válida.' };
   const zona = blueZone(found.region);
-  return { ok: true, costo: BLUE_RATES[zona], zona };
+  const talla = blueTalla(weightKg);
+  const costo = BLUE_RATES[zona]?.[talla];
+  if (costo == null) return { ok: false, error: 'No pudimos calcular la tarifa de retiro.' };
+  return { ok: true, costo, zona, talla };
 }

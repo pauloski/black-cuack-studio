@@ -162,6 +162,57 @@ body{background:var(--surface-soft);overflow-x:clip}
 .co-foot{text-align:center;padding:26px;color:#a0a0a0;font-size:.78rem;border-top:1px solid var(--border-soft);background:var(--color-white)}
 .co-spin{display:inline-block;width:15px;height:15px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:coSpin .7s linear infinite;vertical-align:-2px}
 @keyframes coSpin{to{transform:rotate(360deg)}}
+
+/* ---------- SELECTOR DE COURIER ---------- */
+.co-methods{display:grid;gap:12px;margin-bottom:24px}
+@media(min-width:560px){ .co-methods{grid-template-columns:1fr 1fr} }
+.co-method{
+  position:relative;display:flex;align-items:flex-start;gap:12px;text-align:left;
+  padding:16px 15px;border:1.5px solid var(--border-soft);border-radius:14px;background:#fff;
+  transition:var(--transition-smooth);
+}
+.co-method:hover{border-color:#d8d8d8}
+.co-method.active{border-color:var(--color-brand);background:#fff7ec;box-shadow:0 0 0 3px rgba(243,146,0,.13)}
+.co-method-ico{width:40px;height:40px;flex:0 0 auto;border-radius:11px;display:grid;place-items:center;background:var(--surface-soft);color:var(--color-brand)}
+.co-method.active .co-method-ico{background:var(--color-brand);color:#fff}
+.co-method-ico i{width:20px;height:20px}
+.co-method-main{flex:1;min-width:0}
+.co-method-title{display:block;font-family:var(--font-title);font-weight:700;font-size:.94rem;color:var(--color-dark)}
+.co-method-desc{display:block;font-size:.79rem;color:#8a8a8a;margin-top:2px;line-height:1.35}
+.co-method-price{display:inline-block;margin-top:8px;font-family:var(--font-title);font-weight:700;font-size:.82rem;color:var(--color-brand)}
+.co-method-check{position:absolute;top:12px;right:12px;width:20px;height:20px;border-radius:50%;border:2px solid var(--border-soft);display:grid;place-items:center;color:transparent;transition:var(--transition-smooth)}
+.co-method.active .co-method-check{background:var(--color-brand);border-color:var(--color-brand);color:#fff}
+.co-method-check i{width:12px;height:12px}
+.co-method-badge{position:absolute;top:-9px;left:14px;background:var(--color-dark);color:#fff;font-family:var(--font-title);font-weight:700;font-size:.64rem;letter-spacing:.06em;text-transform:uppercase;padding:3px 9px;border-radius:20px;display:inline-flex;align-items:center;gap:4px}
+.co-method-badge i{width:11px;height:11px}
+
+/* ---------- SELECTOR DE PUNTO BLUE ---------- */
+.co-punto-block{margin-bottom:16px}
+.co-punto-label{display:block;font-family:var(--font-title);font-weight:600;font-size:.82rem;margin-bottom:8px;color:var(--color-dark)}
+.co-punto-search{width:100%;padding:11px 13px;font-family:var(--font-body);font-size:.9rem;border:1.5px solid var(--border-soft);border-radius:10px;margin-bottom:10px}
+.co-punto-search:focus{outline:none;border-color:var(--color-brand);box-shadow:0 0 0 3px rgba(243,146,0,.16)}
+.co-punto-count{font-size:.76rem;color:#9a9a9a;margin:0 0 8px}
+.co-punto-list{display:flex;flex-direction:column;gap:8px;max-height:342px;overflow-y:auto;padding:2px}
+.co-punto{display:flex;gap:11px;padding:12px;border:1.5px solid var(--border-soft);border-radius:12px;cursor:pointer;transition:var(--transition-smooth)}
+.co-punto:hover{border-color:#d8d8d8;background:#fafafa}
+.co-punto.sel{border-color:var(--color-brand);background:#fff7ec}
+.co-punto input{margin-top:3px;accent-color:var(--color-brand);flex:0 0 auto}
+.co-punto-body{flex:1;min-width:0}
+.co-punto-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.co-punto-name{font-family:var(--font-title);font-weight:700;font-size:.87rem;color:var(--color-dark)}
+.co-punto-tag{font-size:.63rem;font-weight:700;letter-spacing:.03em;text-transform:uppercase;padding:2px 7px;border-radius:6px;background:#e8f0fe;color:#1a56db}
+.co-punto-tag.copec{background:#fdeede;color:#c2410c}
+.co-punto-addr{display:block;font-size:.8rem;color:#7a7a7a;margin-top:3px;line-height:1.35}
+.co-punto-meta{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:8px}
+.co-punto-hours{display:inline-flex;align-items:center;gap:5px;font-size:.77rem;font-weight:600}
+.co-punto-hours i{width:13px;height:13px}
+.co-punto-hours.open{color:#2e7d32}
+.co-punto-hours.closed{color:#9a9a9a}
+.co-punto-map{display:inline-flex;align-items:center;gap:4px;font-size:.77rem;font-weight:600;color:var(--color-brand)}
+.co-punto-map:hover{text-decoration:underline}
+.co-punto-map i{width:13px;height:13px}
+.co-punto-state{padding:22px 14px;text-align:center;color:#8a8a8a;font-size:.86rem;border:1.5px dashed var(--border-soft);border-radius:12px;line-height:1.5}
+.co-punto-state i{width:22px;height:22px;color:#c8c8c8;display:block;margin:0 auto 8px}
 </style>
 </head>
 <body data-page="checkout">

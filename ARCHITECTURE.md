@@ -6,9 +6,10 @@
 
 **Estado:** en producción (Cloudflare Pages), validado con venta real de punta a
 punta. Barrido de reservas automatizado (Worker cron) y checkout con rate limiting.
-Despacho a domicilio cotizado en vivo con Chilexpress y checkout en página con
-stepper (rama `feat/chilexpress-envio`).
-**Última actualización:** 20 julio 2026.
+Checkout en página con stepper y **despacho multi-courier**: retiro en Punto Blue
+(Blue Express, tarifa de tabla) y despacho a domicilio cotizado en vivo con
+Chilexpress, elegibles por ambiente vía `SHIPPING_METHODS` (rama `feat/chilexpress-envio`).
+**Última actualización:** 25 julio 2026.
 
 ---
 
@@ -27,11 +28,20 @@ Tres servicios externos:
 | **Cloudflare D1** (SQLite en el edge) | Verdad del **stock en vivo**: decremento atómico, reservas. |
 | **Cloudflare KV** | Registro de órdenes (estado de pago, datos de despacho). |
 | **Flow** (pasarela chilena) | Procesa los pagos (Webpay, etc.) vía firma HMAC. |
-| **Chilexpress** (API Cotizador) | Cotiza el envío a domicilio en vivo (peso + dimensiones + cobertura). |
+| **Chilexpress** (API Cotizador) | Cotiza el envío **a domicilio** en vivo (peso + dimensiones + cobertura). |
+| **Blue Express** (Punto Blue) | **Retiro en punto**: sin API abierta → tarifa de **tabla** (zona × talla). Directorio de puntos servido desde `/api/bluexpress/puntos`. |
 
-Despacho: **a domicilio con Chilexpress**, cotizado en el checkout y cobrado junto
-con los productos por Flow. Flow cobra `productos + envío`. *(Antes era "Por Pagar";
-la sucursal y el tracking automático quedan para la fase con cuenta comercial Chilexpress.)*
+Despacho **multi-courier**, elegible en el checkout y controlado por ambiente
+(env `SHIPPING_METHODS`):
+
+- **Retiro en Punto Blue** (Blue Express): el cliente retira en un local cercano;
+  tarifa de **tabla** por zona × talla porque Blue no expone API. Es el más
+  económico → va **preseleccionado** en el checkout.
+- **Despacho a domicilio** (Chilexpress): cotizado **en vivo** (peso + dimensiones + cobertura).
+
+En ambos casos Flow cobra `productos + envío/retiro`; el costo se **recalcula
+server-side** antes de cobrar (el navegador nunca lo fija). *(La sucursal, la OT y el
+tracking automático de Chilexpress quedan para la fase con cuenta comercial.)*
 
 ---
 
@@ -45,8 +55,12 @@ la sucursal y el tracking automático quedan para la fase con cuenta comercial C
 - **Datos:** Contentful Delivery API (lectura), Cloudflare **D1** (SQL
   transaccional), Cloudflare **KV** (órdenes).
 - **Pagos:** Flow (`flow.cl`), API REST con firma HMAC-SHA256.
-- **Envíos:** Chilexpress API Cotizador (Azure APIM, header `Ocp-Apim-Subscription-Key`),
-  llamada server-side desde `functions/_lib/chilexpress.js`.
+- **Envíos:** multi-courier controlado por `SHIPPING_METHODS`.
+  - **Chilexpress** API Cotizador (Azure APIM, header `Ocp-Apim-Subscription-Key`),
+    llamada server-side desde `functions/_lib/chilexpress.js`.
+  - **Blue Express** (retiro en Punto Blue): sin API → tarifa de tabla
+    (`functions/_lib/blue-rates.js`) y directorio de puntos (`functions/_lib/puntos.json`,
+    2.850 puntos, importado como módulo) servido vía `/api/bluexpress/puntos`.
 - **Hosting/CI:** Cloudflare Pages conectado al repo de GitHub; push a `main`
   despliega producción, push a otra rama crea un Preview.
 
@@ -64,6 +78,8 @@ flowchart TD
 
   B -->|CDA include=2| CF[(Contentful<br/>Delivery API)]
   C -->|GET /api/stock| SF[Pages Functions]
+  D -->|GET /api/shipping/methods| SF
+  D -->|GET /api/bluexpress/puntos| SF
   D -->|POST /api/shipping/quote| SF
   D -->|POST /api/checkout| SF
 
@@ -76,13 +92,15 @@ flowchart TD
     S6[api/admin/resync-stock.js]
     S7[api/admin/sweep.js]
     S8[api/shipping/quote.js]
+    S9[api/shipping/methods.js]
+    S10[api/bluexpress/puntos.js<br/>dataset Blue bundled]
   end
 
   S1 & S2 & S8 -->|catálogo, stock inicial| CF
   S1 & S2 & S3 & S7 -->|stock atómico| D1[(D1<br/>blackquack-stock)]
   S2 & S3 & S4 & S7 -->|órdenes| KV[(KV<br/>ORDERS_KV)]
   S2 & S3 & S4 -->|firma HMAC| FLOW[(Flow API)]
-  S2 & S8 -->|cotiza envío| CHX[(Chilexpress<br/>API Cotizador)]
+  S2 & S8 -->|cotiza domicilio| CHX[(Chilexpress<br/>API Cotizador)]
   FLOW -->|webhook POST| S3
   FLOW -->|redirect POST| S4
 
@@ -95,8 +113,10 @@ flowchart TD
 El **barrido de reservas** ya no vive en Pages Functions: corre en un Worker
 independiente con Cron Trigger (`worker-cron/`, ver §8). El `POST /api/checkout`
 está protegido por una regla WAF de rate limiting que corta antes de la Function.
-El **checkout es una página** (`checkout.html`, stepper de 3 pasos) que cotiza el
-envío con `/api/shipping/quote` y luego cobra en `/api/checkout` (ver §6.6).
+El **checkout es una página** (`checkout.html`, stepper de 3 pasos) que descubre los
+couriers habilitados con `/api/shipping/methods`, cotiza el envío/retiro con
+`/api/shipping/quote` y luego cobra en `/api/checkout` (ver §6.6). Para el retiro en
+Punto Blue lista los puntos de la comuna con `/api/bluexpress/puntos` (ver §6.7).
 
 **Principio clave:** el navegador nunca calcula precios ni ve el `secretKey` de
 Flow. El precio se **recalcula en el servidor** contra Contentful, y la firma
@@ -129,13 +149,19 @@ qty}` + datos de despacho.
 │   │   ├── chilexpress-geo.js     # origen (env) + aliases + comuna→countyCode
 │   │   ├── chilexpress-coverage-data.js # GENERADO: mapa comuna→countyCode (339/346)
 │   │   ├── shipping-quote.js      # peso+caja del carrito + cotización (lo usan quote y checkout)
-│   │   ├── shipping.js  # validación RUT (mód. 11), teléfono, comuna
+│   │   ├── shipping-methods.js    # métodos de despacho habilitados por ambiente (SHIPPING_METHODS)
+│   │   ├── blue-rates.js          # tarifa retiro Punto Blue: tabla zona × talla (Prog. Emprendedor)
+│   │   ├── blue-puntos.js         # consulta de puntos (filtro comuna/región/cercanía) sobre puntos.json
+│   │   ├── puntos.json            # directorio Blue Express (2.850 puntos, ~11 MB; import como módulo)
+│   │   ├── shipping.js  # validación RUT (mód. 11), teléfono, comuna, dirección/punto de retiro
 │   │   └── comunas.js   # 16 regiones · 346 comunas (fuente de verdad server)
 │   └── api/
-│       ├── stock.js          # GET  /api/stock?product=ID
-│       ├── comunas.js        # GET  /api/comunas
-│       ├── shipping/quote.js # POST /api/shipping/quote  (cotiza envío a domicilio)
-│       ├── checkout.js       # POST /api/checkout  (reserva + envío + crea pago Flow)
+│       ├── stock.js            # GET  /api/stock?product=ID
+│       ├── comunas.js          # GET  /api/comunas
+│       ├── shipping/methods.js # GET  /api/shipping/methods  (couriers habilitados)
+│       ├── shipping/quote.js   # POST /api/shipping/quote  (cotiza domicilio o retiro)
+│       ├── bluexpress/puntos.js # GET  /api/bluexpress/puntos  (puntos Blue filtrados)
+│       ├── checkout.js         # POST /api/checkout  (reserva + envío + crea pago Flow)
 │       ├── flow/confirm.js   # POST /api/flow/confirm  (webhook: fuente de verdad del pago)
 │       ├── flow/return.js    # POST /api/flow/return   (aterrizaje del navegador)
 │       └── admin/
@@ -224,9 +250,14 @@ Clave `order:<flowToken>` → JSON:
   "amount_products": 13990,        // desglose: productos
   "amount_shipping": 3990,         // desglose: envío cotizado
   "lines": [{ "id","key","qty","unit_price", ... }],
-  "shipping": { "nombre","rut","telefono","direccion","comuna","region",
-                "courier":"Chilexpress","metodo":"domicilio",
+  "courier": "chilexpress",        // normalizado: "chilexpress" | "blue" (para tracking)
+  "shipping": { "nombre","rut","telefono","comuna","region",
+                // domicilio (Chilexpress):
+                "direccion","courier":"Chilexpress","metodo":"domicilio",
                 "modalidad":"Despacho a domicilio","costo":3990,"servicio":"EXPRESS" },
+  // retiro (Blue Express) reemplaza direccion/servicio por:
+  //   "punto":"Punto Blue Express Olivo — Federico Errázuriz 1052, ...","puntoId":"4068",
+  //   "courier":"Blue Express","metodo":"retiro_punto","servicio":"Punto Blue"
   "status": "pending|paid|rejected|canceled|abandoned",
   "stock_state": "reserved|committed|released",   // idempotencia del stock
   "created_at": "...", "confirmed_at": "..."
@@ -342,7 +373,7 @@ reserved --(pago OK)--> committed
 reserved --(rechazo/anulación/abandono)--> released
 ```
 
-### 6.6 Checkout en página + cotización de envío (Chilexpress)
+### 6.6 Checkout en página + despacho multi-courier
 
 El checkout dejó de ser un modal: es la página **`checkout.html`** (app en
 `js/checkout-page.js`), un **stepper de 3 pasos** — ① Contacto, ② Envío, ③ Pago —
@@ -350,12 +381,23 @@ con resumen del pedido sticky. Lee el carrito de `localStorage` (`bq_cart_v5`) y
 catálogo con `fetchProducts()`; el botón "Finalizar compra" del carrito navega a
 `checkout.html`. El modal viejo (`js/checkout.js`) queda como legado sin uso.
 
-**Cotización (paso 2):** al elegir comuna, el navegador llama
-`POST /api/shipping/quote {comuna, items}`. La cadena es:
+**Selección de courier (paso 2):** al entrar, el checkout pide los métodos
+habilitados con `GET /api/shipping/methods` (según `SHIPPING_METHODS` del ambiente).
+Con **uno solo** va directo; con **dos o más** muestra el selector:
+
+- **Retiro en Punto Blue** va **preseleccionado** y marcado "Más barato".
+- Se piden **solo los campos del courier elegido**: retiro → selector de Punto Blue
+  (Región → Comuna → lista de puntos, ver §6.7); domicilio → dirección (calle + número).
+- Cambiar de courier o de comuna **re-cotiza** y resetea lo que ya no aplica.
+
+**Cotización:** al elegir comuna, el navegador llama
+`POST /api/shipping/quote {method, comuna, items}`. El endpoint bifurca por courier:
+Blue resuelve la tarifa desde la **tabla** (§6.7); Chilexpress cotiza **en vivo**:
 
 ```mermaid
 flowchart LR
-  Q[/api/shipping/quote/] --> G["chilexpress-geo.js<br/>comuna→countyCode"]
+  Q[/api/shipping/quote/] -->|method=chilexpress| G["chilexpress-geo.js<br/>comuna→countyCode"]
+  Q -->|method=blue| BR["blue-rates.js<br/>zona × talla (peso del carrito)"]
   Q --> W["shipping-quote.js<br/>peso + caja del carrito"]
   W --> R["chilexpress.js<br/>POST /rating/.../rates/courier"]
   R --> CHX[(Chilexpress QA/prod)]
@@ -376,6 +418,46 @@ flowchart LR
 `0` = prod `services`); la llave `CHX_RATING_KEY` debe ser **del mismo ambiente**.
 Hoy solo hay llaves QA (precios representativos, no reales); producción requiere
 cuenta comercial + credenciales prod (ticket en curso).
+
+### 6.7 Retiro en Punto Blue (Blue Express)
+
+Blue Express **no expone un API abierto**, así que el retiro se resuelve con datos
+propios: una **tabla de tarifas** y un **directorio de puntos** capturado desde
+`app.bluex.cl`.
+
+**Tarifa — `functions/_lib/blue-rates.js`.** Se cobra la del programa comercial
+**"Emprendedor de Regiones", modalidad Punto a Punto** (retiro→retiro), que es la
+más económica y la que corresponde a nuestro flujo. El precio es `BLUE_RATES[zona][talla]`:
+
+- **Talla** por peso del carrito (`cartWeightKg`): XS ≤0.5 kg · S ≤3 · M ≤6 · L ≤16.
+- **Zona** de destino desde el origen (Quilpué): `valpo` (misma región), `rm`
+  (Santiago), `extremo` (Arica/Parinacota, Tarapacá, Aysén, Magallanes), `otras`
+  (resto interregional).
+
+| Zona \ Talla | XS | S | M | L |
+|---|---|---|---|---|
+| valpo | 1.900 | 2.900 | 3.900 | 4.800 |
+| rm | 2.500 | 3.900 | 4.900 | 7.900 |
+| otras / extremo | 2.900 | 6.900 | 8.500 | 11.500 |
+
+> ⚠️ Estas tarifas requieren **registrar BlackQuack como comercio en blue.cl** — pendiente
+> comercial. `bluePickupRate(comuna, weightKg)` la usan `quote` y `checkout` (idéntico
+> en ambos); `/api/checkout` la **recalcula** antes de cobrar.
+
+**Directorio de puntos — `GET /api/bluexpress/puntos`.** El dataset
+(`functions/_lib/puntos.json`, 2.850 puntos, ~11 MB) se **importa como módulo**: en
+Pages Functions todo lo que vive bajo `functions/` es código, no un asset servible,
+así que no se puede `fetch`; el import es la vía nativa (esbuild lo empaqueta, gzip
+~0.4 MB). `blue-puntos.js` lo adelgaza una vez por isolate y expone `buscarPuntos()`
+con filtros combinables: `comuna`, `comunaId`, `region`, `regionId`, `tipo`, `q`
+(texto libre) y `lat/lng` (ordena por cercanía, haversine). **Nunca sirve el JSON
+crudo**: sin filtro ni `limit` explícito responde 400 (salvaguarda anti-11 MB).
+
+**Selector en el checkout.** Reemplazó al iframe del mapa de blue.cl por un flujo
+más claro: Región → Comuna → **lista visual de puntos** de esa comuna (nombre, tipo
+Punto Blue/Copec, dirección, **horario de hoy** y link "Ver en mapa" a Google Maps).
+Elegir un punto guarda `punto` (etiqueta) + `puntoId`; `validateShipping` (con
+`requirePunto`) exige el punto igual que exige dirección para el domicilio.
 
 ---
 
@@ -458,6 +540,7 @@ npx wrangler secret put FLOW_SECRET_KEY
 | `CHX_RATING_KEY` | Secret | prod (pendiente) | QA (bq-cotizador) |
 | `CHX_ORIGIN_COMUNA` | Plaintext | `QUILPUE` | `QUILPUE` |
 | `CHX_SANDBOX` | Plaintext | `0` (con llave prod) | `1` / ausente (QA) |
+| `SHIPPING_METHODS` | Plaintext | `blue_retiro` (o ausente → default) | `blue_retiro,chilexpress_domicilio` |
 
 **Regla de oro (Flow):** `FLOW_SANDBOX=0` va con llaves de **producción**;
 `FLOW_SANDBOX=1` con llaves de **sandbox**. Nunca se cruzan (Flow rechaza el
@@ -468,6 +551,11 @@ Production (dinero real), otras ramas → Preview (sandbox).
 deben ser del **mismo ambiente** (QA testservices ↔ llave QA; prod services ↔ llave
 prod). Hoy Production usa `CHX_SANDBOX=1` porque aún no hay llave prod; hasta tenerla
 NO se debe mergear a `main` para cobrar precios reales de envío.
+
+**Métodos por ambiente (`SHIPPING_METHODS`):** lista coma-separada que decide qué
+couriers ofrece el checkout. Producción sale hoy **solo con `blue_retiro`**
+(Chilexpress espera credenciales prod); Preview enciende ambos
+(`blue_retiro,chilexpress_domicilio`). Si la variable falta, el default es `blue_retiro`.
 
 ### Bindings (panel → Settings → Functions)
 
@@ -566,6 +654,14 @@ con `/api/comunas`. Para probar la cotización desde Node sin levantar el sitio:
    con `scripts/fetch-chilexpress-coverage.mjs` si Chilexpress cambia su cobertura.
 9. **Checkout page** requiere las Functions (no corre en `file://` ni en solo-frontend).
    El modal legado `js/checkout.js` sigue cargado en algunas páginas pero está sin uso.
+10. **Blue Express — bloqueador comercial:** las tarifas del programa Emprendedor
+    Punto a Punto requieren **registrar BlackQuack como comercio en blue.cl**. Mientras,
+    los valores de `blue-rates.js` son los publicados del programa (no una cuenta activa).
+    Blue **no tiene API**: no hay generación de OT ni tracking automático; el retiro se
+    coordina manualmente con el `puntoId` guardado en la orden.
+11. **`puntos.json` (~11 MB) está versionado** y se empaqueta en el bundle (gzip ~0.4 MB,
+    holgado). Si el directorio Blue cambia hay que re-capturarlo; si algún día pesa
+    demasiado, migrar a KV/R2 en vez del import como módulo.
 
 ---
 
@@ -576,7 +672,9 @@ con `/api/comunas`. Para probar la cotización desde Node sin levantar el sitio:
 - **¿El precio es manipulable?** Revisar `priceCart` en `functions/_lib/catalog.js`
   (ignora cualquier precio del cliente).
 - **¿El envío es manipulable?** Revisar que `/api/checkout` llame `computeShipping`
-  y sume ese costo (no el del body); la key `CHX_RATING_KEY` no debe aparecer en `js/`.
+  (domicilio) o `bluePickupRate` (retiro) y sume ese costo (no el del body); la key
+  `CHX_RATING_KEY` no debe aparecer en `js/`. El courier/método se valida contra
+  `SHIPPING_METHODS` (`isMethodEnabled`), no se confía en el `method` del navegador.
 - **¿El secreto de Flow llega al cliente?** `grep -rn "FLOW_SECRET" js/ *.html`
   debe dar 0 usos reales.
 - **¿La firma HMAC es correcta?** `signParams` en `functions/_lib/flow.js`;

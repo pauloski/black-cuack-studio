@@ -8,7 +8,7 @@ import { flowPost, json } from '../_lib/flow.js';
 import { getCatalog, priceCart, buildSubject, seedUnits } from '../_lib/catalog.js';
 import { validateShipping } from '../_lib/shipping.js';
 import { reserveCart, releaseCart, lazySeed } from '../_lib/stock.js';
-import { computeShipping, FALLBACK_SHIPPING } from '../_lib/shipping-quote.js';
+import { computeShipping, cartWeightKg, FALLBACK_SHIPPING } from '../_lib/shipping-quote.js';
 import { estimateDelivery } from '../_lib/delivery-estimate.js';
 import { bluePickupRate } from '../_lib/blue-rates.js';
 import { methodById, isMethodEnabled } from '../_lib/shipping-methods.js';
@@ -114,8 +114,8 @@ export async function onRequest(context) {
      - Chilexpress caído → tarifa de respaldo para no perder la venta (se registra). */
   let shipCost, shipService;
   if (method.courier === 'blue') {
-    // Retiro en Punto Blue: precio de TABLA (Blue no tiene API).
-    const r = bluePickupRate(ship.shipping.comuna);
+    // Retiro en Punto Blue: precio de TABLA (Blue no tiene API), por zona × talla.
+    const r = bluePickupRate(ship.shipping.comuna, cartWeightKg(catalog, priced.lines));
     if (!r.ok) {
       await releaseCart(env.ORDERS_DB, priced.lines, commerceOrder).catch(() => {});
       return json({ error: r.error, fields: { comuna: r.error } }, 409);
