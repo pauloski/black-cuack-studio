@@ -67,7 +67,7 @@
   <!-- Tabs -->
   <div class="tabs">
     <button class="tab active" data-tab="orders"><i data-lucide="package"></i> Pedidos y despacho</button>
-    <button class="tab" data-tab="stock"><i data-lucide="refresh-cw"></i> Sincronizar stock</button>
+    <button class="tab" data-tab="stock"><i data-lucide="boxes"></i> Inventario</button>
     <button class="tab" data-tab="sweep"><i data-lucide="broom"></i> Liberar reservas</button>
   </div>
 
@@ -81,24 +81,37 @@
     </div>
   </section>
 
-  <!-- PANEL: Stock -->
+  <!-- PANEL: Inventario -->
   <section class="panel" data-panel="stock">
     <div class="admin-card">
-      <h2>Sincronizar stock</h2>
-      <p class="admin-sub">Reabastece D1 con el stock inicial que acabas de publicar en Contentful.</p>
-      <div class="warn">
-        <i data-lucide="alert-triangle"></i>
-        <div>Esto <strong>machaca</strong> el stock en vivo con el valor de Contentful. Córrelo <strong>justo después</strong> de reponer, y evita hacerlo si hay pagos a medio completar (podrías descuadrar una reserva en curso).</div>
-      </div>
+      <h2>Inventario</h2>
+      <p class="admin-sub">Stock <strong>en vivo</strong> (D1, la verdad). Repón sumando unidades (<code>+</code>) o corrige mermas (<code>−</code>): es un ajuste por <strong>delta</strong>, seguro aunque haya compras a medio pagar. No toques Contentful para reponer.</p>
       <div class="admin-row">
         <div class="field" style="flex:0 0 auto;min-width:200px">
-          <label for="product">Producto (opcional)</label>
-          <input id="product" type="text" placeholder="Todos — o ej: BQ-002">
+          <label for="invProduct">Producto (opcional)</label>
+          <input id="invProduct" type="text" placeholder="Todos — o ej: BQ-002">
         </div>
-        <button class="btn lg" id="btnSync" data-hover><i data-lucide="refresh-cw"></i> Sincronizar ahora</button>
+        <button class="btn lg" id="btnInv" data-hover><i data-lucide="boxes"></i> Cargar inventario</button>
       </div>
-      <div id="result"></div>
-      <p class="foot-note">Deja <em>Producto</em> vacío para sincronizar todo, o escribe un id (ej. <code>BQ-002</code>) para uno solo.</p>
+      <div id="invResult"></div>
+
+      <details style="margin-top:22px">
+        <summary style="cursor:pointer;font-family:var(--font-title);font-weight:700;font-size:.85rem;color:#888">Avanzado · Resincronizar desde Contentful (destructivo)</summary>
+        <div style="margin-top:14px">
+          <div class="warn">
+            <i data-lucide="alert-triangle"></i>
+            <div>Esto <strong>machaca</strong> el stock en vivo con el valor absoluto de Contentful e <strong>ignora las reservas en vuelo</strong>. Úsalo solo para re-alinear D1 a la fuerza, y <strong>nunca</strong> con pagos a medio completar. Para reponer día a día usa el ajuste por delta de arriba.</div>
+          </div>
+          <div class="admin-row">
+            <div class="field" style="flex:0 0 auto;min-width:200px">
+              <label for="product">Producto (opcional)</label>
+              <input id="product" type="text" placeholder="Todos — o ej: BQ-002">
+            </div>
+            <button class="btn secondary lg" id="btnSync" data-hover><i data-lucide="refresh-cw"></i> Resincronizar (machaca)</button>
+          </div>
+          <div id="result"></div>
+        </div>
+      </details>
     </div>
   </section>
 
@@ -195,6 +208,83 @@
     } finally { btnSync.disabled = false; btnSync.innerHTML = original; if (window.lucide) lucide.createIcons(); }
   }
   btnSync.addEventListener('click', sync);
+
+  /* ---------- Inventario (ajuste por delta) ---------- */
+  var elInvProduct = document.getElementById('invProduct');
+  var elInvResult = document.getElementById('invResult');
+  var btnInv = document.getElementById('btnInv');
+
+  function invRow(pid, sku) {
+    var label = sku.label || '<span class="muted">único</span>';
+    var drift = sku.vivo - sku.inicial;
+    var driftTxt = drift === 0 ? '' : ' <span class="muted" style="font-size:.72rem">(' + (drift > 0 ? '+' : '') + drift + ' vs inicial)</span>';
+    return '<tr data-pid="' + esc(pid) + '" data-vk="' + esc(sku.variantKey) + '">' +
+      '<td><code>' + esc(pid) + '</code></td>' +
+      '<td>' + label + '</td>' +
+      '<td class="muted">' + sku.inicial + '</td>' +
+      '<td><strong class="inv-live">' + sku.vivo + '</strong>' + driftTxt + '</td>' +
+      '<td><div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">' +
+        '<input type="number" class="inv-delta" placeholder="±N" style="width:74px;padding:7px 8px;border:1.5px solid #ddd;border-radius:8px;font-size:.85rem">' +
+        '<input type="text" class="inv-motivo" placeholder="motivo (opcional)" style="width:150px;padding:7px 8px;border:1.5px solid #ddd;border-radius:8px;font-size:.82rem">' +
+        '<button class="btn inv-apply" style="padding:7px 12px;font-size:.8rem">Aplicar</button>' +
+        '<span class="inv-msg"></span>' +
+      '</div></td></tr>';
+  }
+
+  function renderInventory(data) {
+    var products = data.products || [];
+    if (!products.length) { elInvResult.innerHTML = '<p class="muted" style="margin-top:14px">Sin productos.</p>'; return; }
+    var rows = products.map(function (p) {
+      return p.skus.map(function (s) { return invRow(p.product, s); }).join('');
+    }).join('');
+    elInvResult.innerHTML = '<table><thead><tr><th>Producto</th><th>Variante</th><th>Inicial (CF)</th><th>En vivo</th><th>Ajuste</th></tr></thead><tbody>' + rows + '</tbody></table>' +
+      '<p class="foot-note">El ajuste suma/resta sobre el stock en vivo. Ej: llegaron 10 → escribe <code>10</code>; se dañaron 2 → <code>-2</code>.</p>';
+    if (window.lucide) lucide.createIcons();
+    elInvResult.querySelectorAll('.inv-apply').forEach(function (b) {
+      b.addEventListener('click', function () { applyAdjust(b); });
+    });
+  }
+
+  async function applyAdjust(btn) {
+    var s = secretOr(elInvResult); if (!s) return;
+    var tr = btn.closest('tr');
+    var deltaEl = tr.querySelector('.inv-delta');
+    var motivoEl = tr.querySelector('.inv-motivo');
+    var msgEl = tr.querySelector('.inv-msg');
+    var delta = Math.trunc(Number(deltaEl.value));
+    if (!Number.isFinite(delta) || delta === 0) { msgEl.innerHTML = '<span class="err-line" style="font-weight:600;font-size:.78rem">±N inválido</span>'; return; }
+    var orig = btn.innerHTML; btn.disabled = true; btn.innerHTML = '…'; msgEl.innerHTML = '';
+    try {
+      var res = await fetch('/api/admin/stock-adjust', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-secret': s },
+        body: JSON.stringify({ product: tr.getAttribute('data-pid'), variantKey: tr.getAttribute('data-vk'), delta: delta, motivo: motivoEl.value.trim() })
+      });
+      var data = await res.json();
+      if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
+      tr.querySelector('.inv-live').textContent = data.new;
+      deltaEl.value = ''; motivoEl.value = '';
+      var sign = data.delta > 0 ? '+' + data.delta : String(data.delta);
+      msgEl.innerHTML = '<span style="color:#1a7f37;font-weight:700;font-size:.78rem">' + esc(sign) + ' → ' + data.new + '</span>';
+    } catch (e) {
+      msgEl.innerHTML = '<span class="err-line" style="font-weight:600;font-size:.78rem">' + esc(e.message) + '</span>';
+    } finally { btn.disabled = false; btn.innerHTML = orig; }
+  }
+
+  async function loadInventory() {
+    var s = secretOr(elInvResult); if (!s) return;
+    var prod = elInvProduct.value.trim();
+    var url = '/api/admin/stock' + (prod ? '?product=' + encodeURIComponent(prod) : '');
+    var orig = btnInv.innerHTML; btnInv.disabled = true; btnInv.innerHTML = 'Cargando…'; elInvResult.innerHTML = '';
+    try {
+      var res = await fetch(url, { headers: { 'x-admin-secret': s } });
+      var data = await res.json();
+      if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
+      renderInventory(data);
+    } catch (e) {
+      elInvResult.innerHTML = '<div class="err-line"><i data-lucide="x-circle"></i> ' + esc(e.message) + '</div>'; if (window.lucide) lucide.createIcons();
+    } finally { btnInv.disabled = false; btnInv.innerHTML = orig; if (window.lucide) lucide.createIcons(); }
+  }
+  btnInv.addEventListener('click', loadInventory);
 
   /* ---------- Sweeper ---------- */
   var btnSweep = document.getElementById('btnSweep');

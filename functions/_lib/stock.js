@@ -141,6 +141,43 @@ export async function resyncStock(db, productId, units) {
   return changes;
 }
 
+/* AJUSTE MANUAL por DELTA (reabastecer / mermar) desde el admin. Aditivo:
+   qty = qty + delta. Es SEGURO frente a reservas en vuelo porque qty ya las
+   refleja (reserveLine las restó) — a diferencia del resync absoluto. El
+   CHECK (qty >= 0) del esquema impide restar de más. Devuelve
+   { ok:true, old, new, delta } o { ok:false, error, notFound? }. */
+export async function adjustStock(db, productId, key, delta, motivo = 'ajuste') {
+  const d = Math.trunc(Number(delta) || 0);
+  if (!d) return { ok: false, error: 'El ajuste no puede ser 0.' };
+
+  let row;
+  try {
+    row = await db
+      .prepare('UPDATE stock SET qty = qty + ?, updated_at = ? WHERE product_id = ? AND variant_key = ? RETURNING qty')
+      .bind(d, now(), productId, key)
+      .first();
+  } catch (e) {
+    // CHECK (qty >= 0): el delta dejaría el stock negativo. Leemos el actual solo
+    // para dar un mensaje útil (el UPDATE no cambió nada).
+    const cur = await db
+      .prepare('SELECT qty FROM stock WHERE product_id = ? AND variant_key = ?')
+      .bind(productId, key)
+      .first();
+    return { ok: false, error: `No puedes restar ${-d}: solo hay ${cur ? cur.qty : 0} en stock.`, current: cur ? cur.qty : 0 };
+  }
+
+  // Sin fila afectada → el SKU aún no está sembrado en D1.
+  if (!row) return { ok: false, notFound: true, error: 'SKU no encontrado en D1. Carga el inventario para sembrarlo y reintenta.' };
+
+  const newQty = row.qty;
+  await db
+    .prepare('INSERT INTO stock_ledger (product_id,variant_key,delta,reason,ref,created_at) VALUES (?,?,?,?,?,?)')
+    .bind(productId, key, d, 'adjust', String(motivo || 'ajuste').slice(0, 120), now())
+    .run();
+
+  return { ok: true, old: newQty - d, new: newQty, delta: d };
+}
+
 /* Deja rastro de que la reserva se convirtió en venta. El stock ya se descontó
    al reservar; esto es auditoría, no cambia cantidades. */
 export async function commitCart(db, lines, ref) {

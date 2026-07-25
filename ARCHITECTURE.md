@@ -162,6 +162,8 @@ qty}` + datos de despacho.
 │       ├── shipping/quote.js   # POST /api/shipping/quote  (cotiza domicilio o retiro)
 │       ├── bluexpress/puntos.js # GET  /api/bluexpress/puntos  (puntos Blue filtrados)
 │       ├── checkout.js         # POST /api/checkout  (reserva + envío + crea pago Flow)
+│       ├── admin/stock.js        # GET  /api/admin/stock  (visor inventario en vivo + seed)
+│       ├── admin/stock-adjust.js # POST /api/admin/stock-adjust  (restock/merma por delta, seguro)
 │       ├── flow/confirm.js   # POST /api/flow/confirm  (webhook: fuente de verdad del pago)
 │       ├── flow/return.js    # POST /api/flow/return   (aterrizaje del navegador)
 │       └── admin/
@@ -488,13 +490,22 @@ Elegir un punto guarda `punto` (etiqueta) + `puntoId`; `validateShipping` (con
 
 ## 8. Herramientas de administración (`admin.html`, no enlazada)
 
-Protegidas por `ADMIN_RESYNC_SECRET`:
+Protegidas por `ADMIN_RESYNC_SECRET` (header `x-admin-secret`):
 
-- **`/api/admin/resync-stock`** — reabastecimiento autoritativo: lee Contentful
-  en vivo (sin caché) y **machaca** `qty` en D1 con el stock que el admin acaba
-  de publicar (upsert + `stock_ledger` reason `restock`). Necesario porque D1
-  manda una vez sembrado. **Destructivo respecto a reservas en vuelo** → correr
-  cuando no haya pagos a medio camino.
+- **`/api/admin/stock`** (GET) — **visor de inventario en vivo**. Por cada SKU
+  muestra el `qty` de D1 (la verdad) y el `stock` inicial de Contentful para ver
+  el desfase. Al cargar hace `lazySeed` (idempotente) de todos los SKU, así las
+  variantes nuevas quedan materializadas en D1.
+- **`/api/admin/stock-adjust`** (POST `{product, variantKey, delta, motivo}`) —
+  **reabastecimiento/merma por DELTA** (`qty = qty + delta`). Es la vía diaria de
+  restock desde `admin.html` (pestaña "Inventario"). **Seguro frente a reservas en
+  vuelo** porque `qty` ya las refleja (aditivo, no absoluto); el `CHECK (qty >= 0)`
+  impide restar de más. Registra `stock_ledger` con reason `adjust` y `ref`=motivo.
+- **`/api/admin/resync-stock`** — reabastecimiento autoritativo **ABSOLUTO**: lee
+  Contentful en vivo y **machaca** `qty` en D1 (upsert + ledger reason `restock`).
+  **Destructivo respecto a reservas en vuelo** → quedó relegado a "Avanzado" en el
+  admin, solo para re-alinear D1 a la fuerza; el día a día se hace con el delta de
+  arriba, que no tiene ese riesgo.
 - **`/api/admin/sweep`** — libera reservas **abandonadas**: recorre las órdenes
   `reserved` vencidas, consulta Flow (`getStatus`) y libera solo las **no
   pagadas** (si Flow dice pagada, hace `commit` como red de seguridad). Comparte
@@ -631,8 +642,12 @@ con `/api/comunas`. Para probar la cotización desde Node sin levantar el sitio:
 
 ## 11. Limitaciones conocidas / pendientes
 
-1. **Restock:** editar stock en Contentful no se refleja tras el primer seed →
-   usar `/api/admin/resync-stock`.
+1. **Restock:** ~~editar stock en Contentful no se refleja tras el primer seed~~
+   **resuelto** con el **ajuste por delta** (`/api/admin/stock-adjust`, pestaña
+   "Inventario"): se repone sumando unidades en D1, sin tocar Contentful y sin el
+   riesgo del resync absoluto. `resync-stock` queda solo como reset de emergencia.
+   *(Extensión futura: un webhook de Contentful reconciliador podría convertir las
+   ediciones del CMS en deltas reusando la misma `adjustStock` — sin sobreventa.)*
 2. **Sweeper:** ~~requiere un cron externo~~ **resuelto** con el Worker
    `blackquack-cron` (§8.1). Ojo: se despliega **aparte** de Pages — un cambio en
    `worker-cron/` no se publica con el push a `main`; hay que `wrangler deploy`.
