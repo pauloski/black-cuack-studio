@@ -220,7 +220,7 @@
     var p1 = '<div class="co-panel" data-step="1"><h2>¿Quién recibe?</h2>' +
       '<p class="co-sub">Para la boleta y para coordinar la entrega.</p>' +
       field('email', 'Email', { type: 'email', autocomplete: 'email', inputmode: 'email', ph: 'tu@email.com' }) +
-      field('nombre', 'Nombre completo', { autocomplete: 'name', ph: 'Paulo Correa' }) +
+      field('nombre', 'Nombre completo', { autocomplete: 'name', ph: 'Javiera Rojas' }) +
       '<div class="co-row">' +
         field('rut', 'RUT', { ph: '12.345.678-5' }) +
         field('telefono', 'Teléfono', { type: 'tel', autocomplete: 'tel', inputmode: 'tel', ph: '9 1234 5678' }) +
@@ -232,13 +232,13 @@
     // Paso 2 — Envío
     var p2 = '<div class="co-panel" data-step="2"><h2>¿Cómo lo recibes?</h2>' +
       '<p class="co-sub">Elige tu comuna y verás el costo al instante.</p>' +
+      '<div class="co-ship-box"><i data-lucide="info"></i><span>Para optimizar el costo de despacho entregamos con <strong>Blue Express</strong>: retiras tu pedido en el <strong>Punto Blue o Copec</strong> más cercano. También puedes recibir a domicilio.</span></div>' +
       '<div id="coMethodSel"></div>' +
       '<div class="co-row">' +
         field('region', 'Región', { type: 'select' }) +
         field('comuna', 'Comuna', { type: 'select', attrs: 'disabled' }) +
       '</div>' +
       '<div id="coMethodFields"></div>' +
-      field('referencia', 'Referencia', { opt: true, ph: 'Portón negro, entre calles X e Y' }) +
       '<div class="co-ship-result" id="coShipResult"><span class="muted">Elige tu comuna para cotizar</span><span class="price"></span></div>' +
       '<div class="co-formerr" data-for="_step2"></div>' +
       '<div class="co-nav">' +
@@ -266,19 +266,12 @@
     fillRegiones();
     renderMethodSel();
     renderMethodFields();
-    // Restaura comuna si venía guardada (tras poblar el select de comunas).
-    if (F.region) { var rs = document.querySelector('[name="region"]'); if (rs) { rs.value = F.region; onRegionChange(); if (F.comuna) { var cs = document.querySelector('[name="comuna"]'); if (cs) cs.value = F.comuna; } } }
+    // La selección de envío (región/comuna/punto) NO se restaura: el paso 2 parte
+    // siempre en "Selecciona…" para no sesgar al cliente hacia una región. Los
+    // datos de contacto sí persisten (se rellenan en field() vía value=).
     wire();
     showStep(step);
     icons();
-    // Con comuna guardada: recarga puntos (Blue), reponiendo el punto elegido, y re-cotiza.
-    if (val('comuna')) {
-      if (activeMethod && activeMethod.needsPunto) {
-        if (F.puntoId) setPunto(F.puntoId, F.punto);   // onRegionChange lo limpió; lo reponemos antes de cargar
-        loadPuntos(val('comuna'));
-      }
-      requestQuote();
-    }
   }
 
   /* ---------------- regiones / comunas ---------------- */
@@ -352,7 +345,9 @@
           '<small class="co-err" data-for="punto"></small>' +
         '</div>';
     }
-    return field('direccion', 'Dirección — calle y número', { autocomplete: 'street-address', ph: 'Av. Los Carrera 1234, depto 5B' });
+    // Domicilio: dirección + referencia (esta última NO aplica al retiro en punto).
+    return field('direccion', 'Dirección — calle y número', { autocomplete: 'street-address', ph: 'Av. Los Carrera 1234, depto 5B' }) +
+      field('referencia', 'Referencia', { opt: true, ph: 'Portón negro, entre calles X e Y' });
   }
   function renderMethodFields() {
     var c = document.getElementById('coMethodFields');
@@ -380,11 +375,6 @@
     var a = (p.horarios || []).filter(function (h) { return h.day === hoy; })[0];
     if (!a) return { txt: 'Cerrado hoy', open: false };
     return { txt: a.startTime + '–' + a.endTime, open: true };
-  }
-  function mapsLink(p) {
-    var q = (p.lat != null && p.lng != null) ? (p.lat + ',' + p.lng)
-      : ((p.direccion && p.direccion.completa) || p.nombre || 'Blue Express');
-    return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(q);
   }
   function puntoLabel(p) {
     var dir = (p.direccion && p.direccion.completa) || '';
@@ -421,7 +411,7 @@
         (dir ? '<span class="co-punto-addr">' + esc(dir) + '</span>' : '') +
         '<span class="co-punto-meta">' +
           '<span class="co-punto-hours ' + (h.open ? 'open' : 'closed') + '"><i data-lucide="clock"></i>' + esc(h.open ? 'Hoy ' + h.txt : h.txt) + '</span>' +
-          '<a class="co-punto-map" href="' + esc(mapsLink(p)) + '" target="_blank" rel="noopener"><i data-lucide="map-pin"></i>Ver en mapa</a>' +
+          '<a class="co-punto-map" href="' + BLUE_FINDER + '" target="_blank" rel="noopener" title="Ubica este punto en el mapa oficial de Blue Express"><i data-lucide="map-pin"></i>Ver en Blue ↗</a>' +
         '</span>' +
       '</span>' +
     '</label>';
@@ -569,7 +559,7 @@
     var el = document.getElementById('coRecap'); if (!el) return;
     var retiro = activeMethod && activeMethod.needsPunto;
     var envioV = (retiro ? 'Retiro en: ' + esc(val('punto')) : esc(val('direccion'))) + '<br>' + esc(val('comuna')) +
-      (val('referencia') ? '<br><span style="color:#9a9a9a">' + esc(val('referencia')) + '</span>' : '');
+      (!retiro && val('referencia') ? '<br><span style="color:#9a9a9a">' + esc(val('referencia')) + '</span>' : '');
     var despachoV = (retiro ? 'Punto Blue' : 'Chilexpress ' + esc(shipping.servicio)) + ' · ' + money(shipping.cost);
     var rows = [
       { k: 'Contacto', v: esc(val('nombre')) + '<br>' + esc(val('email')) + ' · ' + esc(val('telefono')), edit: 1 },
@@ -596,7 +586,7 @@
         body: JSON.stringify({
           email: val('email'), items: lineItems(),
           method: activeMethod ? activeMethod.id : 'blue_retiro',
-          shipping: { nombre: val('nombre'), rut: val('rut'), telefono: val('telefono'), comuna: val('comuna'), referencia: val('referencia'), direccion: val('direccion'), punto: val('punto'), puntoId: val('puntoId') }
+          shipping: { nombre: val('nombre'), rut: val('rut'), telefono: val('telefono'), comuna: val('comuna'), referencia: (activeMethod && activeMethod.needsPunto) ? '' : val('referencia'), direccion: val('direccion'), punto: val('punto'), puntoId: val('puntoId') }
         })
       });
       var data = await res.json().catch(function () { return null; });
