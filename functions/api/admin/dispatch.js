@@ -7,6 +7,7 @@
 import { json } from '../../_lib/flow.js';
 import { requireAdmin } from '../../_lib/admin-auth.js';
 import { FULFILLMENT_LABELS, trackingUrl } from '../../_lib/fulfillment.js';
+import { ORDER_CODE_RE } from '../../_lib/brand.js';
 
 const TTL = 60 * 60 * 24 * 90;
 
@@ -21,7 +22,7 @@ export async function onRequest({ request, env }) {
 
   const code = String(body?.order || '').trim().toUpperCase();
   const action = String(body?.action || '');
-  if (!/^BQ-[A-Z0-9]{4,}$/.test(code)) return json({ error: 'Número de orden inválido.' }, 400);
+  if (!ORDER_CODE_RE.test(code)) return json({ error: 'Número de orden inválido.' }, 400);
 
   const token = await env.ORDERS_KV.get('ordercode:' + code);
   if (!token) return json({ error: 'No encontramos esa orden.' }, 404);

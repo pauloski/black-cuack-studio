@@ -5,11 +5,26 @@
 > ecommerce JAMstack de BlackQuack.
 
 **Estado:** en producción (Cloudflare Pages), validado con venta real de punta a
-punta. Barrido de reservas automatizado (Worker cron) y checkout con rate limiting.
+punta. Barrido de reservas automatizado (Worker cron) y **rate limiting en el edge
+sobre `POST /api/checkout` y el webhook `POST /api/flow/confirm`**.
 Checkout en página con stepper y **despacho multi-courier**: retiro en Punto Blue
 (Blue Express, tarifa de tabla) y despacho a domicilio cotizado en vivo con
 Chilexpress, elegibles por ambiente vía `SHIPPING_METHODS` (rama `feat/chilexpress-envio`).
-**Última actualización:** 25 julio 2026.
+
+**Última actualización:** 26 julio 2026, 11:18 (hora Chile, UTC−04).
+
+> **Registro de cambios (para lectura por otras IA):**
+> - **2026-07-26 11:18** — Rate limiting extendido al webhook de Flow: la regla WAF
+>   `BQ throttle checkout` ahora cubre `POST /api/checkout` **y** `POST /api/flow/confirm`
+>   (mitiga amplificación/DoS por tokens falsos que forzarían llamadas salientes a Flow).
+>   Aplicado en el panel de Cloudflare y **sincronizado** en `scripts/setup-ratelimit.sh`
+>   (que además ahora acepta `CF_ZONE_ID` por env para el modelo llave-en-mano).
+> - **2026-07-26** — Desacople de marca (preparación fork llave-en-mano): prefijo de
+>   orden movido a `functions/_lib/brand.js` (fuente de verdad backend, lee generación
+>   y validaciones); bloque `BRAND` en `js/config.js` (frontend). Colores ya estaban
+>   en `css/bq-v5.css` (`:root`). Ver §13.
+> - **2026-07-26** — Exposición histórica del `secretKey` de producción en `.dev.vars`:
+>   **RESUELTA**. Credenciales rotadas y actualizadas; las activas son seguras.
 
 ---
 
@@ -476,12 +491,14 @@ Elegir un punto guarda `punto` (etiqueta) + `puntoId`; `validateShipping` (con
 | **Sobreventa** | Imposible por el `UPDATE ... WHERE qty>=n` atómico de D1. |
 | **`FLOW_SANDBOX`** | Obligatoria (`"0"`/`"1"`); si falta, el checkout se **bloquea** en vez de asumir producción. |
 | **Endpoints admin** | Protegidos por `ADMIN_RESYNC_SECRET`, **solo** por header `x-admin-secret` (se quitó el `?secret=` de la URL para no filtrarlo en logs), comparación de tiempo constante. |
-| **Rate limiting checkout** | Regla WAF (`http_ratelimit`) sobre `POST /api/checkout`: 10 req/10 s por IP → **block** 10 s. Corta en el edge antes de ejecutar la Function/tocar Flow/D1. Se aplica con `scripts/setup-ratelimit.sh`. |
+| **Rate limiting** | Regla WAF (`http_ratelimit`) `BQ throttle checkout` sobre `POST /api/checkout` **y** `POST /api/flow/confirm`: 10 req/10 s por IP → **block** 10 s. Corta en el edge antes de ejecutar la Function/tocar Flow/D1. El webhook `/api/flow/confirm` se incluye porque un atacante podría hacer POST masivos con tokens arbitrarios para forzar llamadas salientes a `payment/getStatus` (amplificación/DoS); la **integridad** del pedido nunca estuvo en riesgo (la verdad es la respuesta firmada de Flow), esto es defensa de disponibilidad/costo. Acción **block** (no challenge): ambos endpoints se llaman server-a-servidor / por `fetch()` y no pueden resolver un challenge. Se aplica con `scripts/setup-ratelimit.sh` (idempotente; acepta `CF_ZONE_ID` por env para forks). |
 | **Datos personales** | RUT/dirección/teléfono se guardan en KV, **no** se envían a Flow (Flow solo recibe items + comuna). |
 
 **Puntos de auditoría / mejoras pendientes:**
-1. El `secretKey` de producción estuvo brevemente en `.dev.vars.example` y en el
-   historial de chat durante el desarrollo → **rotarlo** en el panel de Flow.
+1. ✅ **RESUELTO (2026-07-26):** el `secretKey` de producción estuvo brevemente en
+   `.dev.vars.example` y en el historial de chat durante el desarrollo. Las
+   credenciales **ya fueron rotadas y actualizadas** en el panel de Flow; las
+   activas son seguras. El `.dev.vars` local no contiene llaves de producción.
 2. `ADMIN_RESYNC_SECRET` es autenticación básica; ya se movió a **header-only**
    (sin secreto en la URL). Para más robustez, firmar las requests.
 3. El `.dev.vars` local debe permanecer SIEMPRE en sandbox (regla operativa).
@@ -696,3 +713,38 @@ con `/api/comunas`. Para probar la cotización desde Node sin levantar el sitio:
   verificable contra Flow con `payment/getStatus` (read-only, no cobra).
 - **¿Idempotencia de pagos?** `stock_state` en `flow/confirm.js` (solo actúa
   desde `reserved`).
+
+---
+
+## 13. Marca y modelo "llave en mano" (fork)
+
+Este proyecto es, además del ecommerce de BlackQuack, una **base para forkear** y
+entregar tiendas a otros clientes. Las constantes de marca están **desacopladas de
+la lógica**, repartidas en tres puntos según el runtime (no hay build step que los
+una, por diseño "cero build step" del frontend). Al forkear se ajustan en paralelo:
+
+| # | Qué | Dónde | Cubre |
+|---|---|---|---|
+| 1 | **Backend** | `functions/_lib/brand.js` | `orderPrefix` (prefijo del N° de orden) + `name`. La generación (`newOrderCode`) y las validaciones (`ORDER_CODE_RE` en `checkout.js`, `admin/dispatch.js`, `order/status.js`) leen de aquí. |
+| 2 | **Frontend (JS)** | `js/config.js` → `window.BQ_CONFIG.BRAND` | Nombre, tagline, email, redes. Lo que consume el JS del navegador. |
+| 3 | **Colores** | `css/bq-v5.css` (`:root`) | `--color-brand`, `--color-accent`, etc. Ya estaba centralizado. |
+| 4 | **Infra WAF** | `scripts/setup-ratelimit.sh` | Rate limiting; `export CF_ZONE_ID=...` apunta a la zona del cliente. |
+
+**Límites honestos (no sobrevender la "flexibilidad"):**
+
+- **Texto estático del HTML** (títulos `<title>`, footer, copy en `nosotros.html`,
+  etc.) **no** se lee desde config: por el "cero build step", se cambia con un
+  **find/replace** al forkear. Centralizarlo exigiría un build step o inyección JS
+  en runtime (flash de contenido), ambos contrarios al principio de diseño.
+- **SKU (`BQ-001`, …) NO son constantes de código**: viven en **Contentful** (los
+  define cada cliente en su catálogo). No se tocan aquí.
+- **Nombres de tablas D1** (`blackquack-stock`, etc.) son **internos**; un fork los
+  conserva idénticos. Rebautizarlos no aporta y agrega riesgo.
+- **Stack Chile-only**: pagos (**Flow**) y couriers (**Chilexpress**, **Blue
+  Express**) son chilenos. La moneda efectiva es **CLP**; esto es un "llave en mano
+  para PYMEs chilenas", no un ecommerce multi-país. Cambiar de país implica
+  reescribir pagos y despacho, no solo config.
+
+**Checklist mínimo de fork:** `brand.js` (prefijo+nombre) · `js/config.js` (BRAND) ·
+`css/bq-v5.css` (colores) · logo en `images/` · find/replace del nombre en HTML ·
+`CF_ZONE_ID` + `setup-ratelimit.sh` · secrets de Flow/Chilexpress del cliente.

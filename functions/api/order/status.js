@@ -5,13 +5,14 @@
 
 import { json } from '../../_lib/flow.js';
 import { publicOrderView } from '../../_lib/fulfillment.js';
+import { ORDER_CODE_RE } from '../../_lib/brand.js';
 
 export async function onRequest({ request, env }) {
   if (request.method !== 'GET') return json({ error: 'Método no permitido.' }, 405);
   if (!env.ORDERS_KV) return json({ ok: false, error: 'Seguimiento no disponible.' }, 503);
 
   const code = (new URL(request.url).searchParams.get('order') || '').trim().toUpperCase();
-  if (!/^BQ-[A-Z0-9]{4,}$/.test(code)) return json({ ok: false, error: 'Número de orden inválido.' }, 400);
+  if (!ORDER_CODE_RE.test(code)) return json({ ok: false, error: 'Número de orden inválido.' }, 400);
 
   // ordercode:<commerceOrder> → token de Flow (índice escrito en el checkout).
   const token = await env.ORDERS_KV.get('ordercode:' + code);

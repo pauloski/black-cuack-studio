@@ -12,6 +12,7 @@ import { computeShipping, cartWeightKg, FALLBACK_SHIPPING } from '../_lib/shippi
 import { estimateDelivery } from '../_lib/delivery-estimate.js';
 import { bluePickupRate } from '../_lib/blue-rates.js';
 import { methodById, isMethodEnabled } from '../_lib/shipping-methods.js';
+import { newOrderCode } from '../_lib/brand.js';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
@@ -20,7 +21,8 @@ const RESERVATION_WINDOW_SECONDS = 3600;
 
 function orderId() {
   // Único e impredecible: commerceOrder no se puede repetir entre intentos.
-  return 'BQ-' + crypto.randomUUID().split('-')[0].toUpperCase();
+  // El prefijo de marca vive en _lib/brand.js (fork llave-en-mano).
+  return newOrderCode();
 }
 
 export async function onRequest(context) {
