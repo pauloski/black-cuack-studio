@@ -562,6 +562,67 @@ function renderPDP(){
   lucide.createIcons();
   pdpInitVariants(p);
 }
+
+/* ---------- SEO: datos estructurados schema.org (JSON-LD) ----------
+   Inyecta un <script type="application/ld+json"> con el Product + Offer del
+   producto para rich snippets de Google (precio, stock, imagen). Se llama tras
+   conocer el stock EN VIVO para que la disponibilidad sea real. Como la PDP se
+   renderiza en el cliente, el JSON-LD se inserta por JS: Googlebot ejecuta JS y
+   lo lee, aunque un render server-side sería aún más robusto. */
+function injectProductSchema(p){
+  try{
+    var old=document.getElementById('bq-product-schema'); if(old) old.remove();
+
+    // Disponibilidad desde el stock en vivo ya cargado (PDP.stockByKey).
+    var avail='https://schema.org/InStock';
+    if(PDP&&PDP.stockByKey){
+      var known=Object.keys(PDP.stockByKey).map(function(k){return PDP.stockByKey[k];})
+        .filter(function(q){return q!=null&&!isNaN(q);});
+      if(known.length){
+        var total=known.reduce(function(a,b){return a+Number(b);},0);
+        avail=total>0?'https://schema.org/InStock':'https://schema.org/OutOfStock';
+      }
+    }
+
+    var currency='CLP';                 // toda la tienda cotiza en pesos chilenos
+    var url=location.href;
+    var offers;
+    if(p.variants.length && p.priceMax>p.price){
+      // Variantes con distinto precio → AggregateOffer (rango "desde–hasta").
+      offers={ '@type':'AggregateOffer', priceCurrency:currency,
+        lowPrice:p.price, highPrice:p.priceMax, offerCount:p.variants.length,
+        availability:avail, itemCondition:'https://schema.org/NewCondition', url:url };
+    }else{
+      offers={ '@type':'Offer', priceCurrency:currency, price:p.price,
+        availability:avail, itemCondition:'https://schema.org/NewCondition', url:url };
+    }
+
+    // Imágenes reales (descarta el placeholder de dummyimage si hay fotos).
+    var imgs=(p.images||[]).filter(function(u){return u && u.indexOf('dummyimage.com')===-1;});
+    if(!imgs.length) imgs=p.images||[];
+
+    var brandName=(window.BQ_CONFIG&&BQ_CONFIG.BRAND&&BQ_CONFIG.BRAND.name)||'BlackQuack';
+    var desc=String(p.desc||'').replace(/<[^>]*>/g,'').trim(); // texto plano
+
+    var data={
+      '@context':'https://schema.org/',
+      '@type':'Product',
+      name:p.name,
+      image:imgs,
+      description:desc||undefined,
+      sku:p.id,
+      brand:{ '@type':'Brand', name:brandName },
+      offers:offers
+    };
+
+    var s=document.createElement('script');
+    s.type='application/ld+json';
+    s.id='bq-product-schema';
+    s.textContent=JSON.stringify(data);
+    document.head.appendChild(s);
+  }catch(e){ /* el SEO no debe romper la PDP */ }
+}
+
 function pdpSelect(btn,src){
   document.getElementById('pdpMain').src=src;
   document.querySelectorAll('.pdp-thumb').forEach(t=>t.classList.remove('active'));
@@ -586,6 +647,8 @@ async function pdpInitVariants(p){
     if(p.variants.length) p.variants.forEach(v=>{ PDP.stockByKey[v.key]=(v.initial_stock!=null?v.initial_stock:null); });
     else PDP.stockByKey['']=(p.stock!=null?p.stock:null); // simple: stock global de Contentful
   }
+
+  injectProductSchema(p); // SEO: JSON-LD con disponibilidad real (stock ya cargado)
 
   if(!p.variants.length){ pdpRefresh(); return; } // simple: sin selectores
 
