@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Página no encontrada — BlackQuack</title>
+<meta name="robots" content="noindex">
+<meta name="description" content="La página que buscas no existe en BlackQuack.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Archivo+Black&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<!-- Rutas ABSOLUTAS a propósito: el 404 se sirve en la URL pedida (ej.
+     /perro/verde.html), así los assets cargan sin importar la profundidad. -->
+<link rel="stylesheet" href="/css/bq-v5.css">
+<style>
+/* Autocontenido: no depende del header/nav inyectado por JS del resto del sitio,
+   para que la página de error sea robusta aunque algo más falle. */
+body{
+  min-height:100vh;margin:0;
+  background:var(--surface-soft,#f1f1f1);
+  color:var(--color-dark,#444);
+  font-family:var(--font-body,'Plus Jakarta Sans',sans-serif);
+  display:flex;flex-direction:column;
+}
+.e404-top{
+  display:flex;align-items:center;justify-content:center;
+  padding:18px clamp(16px,4vw,40px);
+  background:var(--color-white,#fff);border-bottom:1px solid var(--border-soft,#e6e6e6);
+}
+.e404-logo{font-family:var(--font-display,'Archivo Black',sans-serif);font-size:1.2rem;letter-spacing:-.03em;color:var(--color-dark,#444);text-decoration:none}
+.e404-logo span{color:var(--color-brand,#F39200)}
+.e404-main{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;padding:clamp(30px,7vw,70px) 20px;gap:6px;
+}
+.e404-code{
+  font-family:var(--font-display,'Archivo Black',sans-serif);
+  font-size:clamp(5.5rem,22vw,11rem);line-height:.9;
+  color:var(--color-brand,#F39200);letter-spacing:-.04em;margin:0;
+}
+.e404-duck{width:clamp(84px,20vw,120px);height:auto;margin:6px 0 10px}
+.e404-title{font-family:var(--font-title,'Space Grotesk',sans-serif);font-weight:700;font-size:clamp(1.3rem,4vw,1.8rem);margin:0}
+.e404-sub{color:#7a7a7a;font-size:1rem;max-width:460px;margin:8px auto 0;line-height:1.55}
+.e404-actions{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:26px}
+.e404-btn{
+  display:inline-flex;align-items:center;gap:9px;text-decoration:none;
+  font-family:var(--font-title,'Space Grotesk',sans-serif);font-weight:700;font-size:.95rem;
+  padding:14px 24px;border-radius:12px;transition:transform .2s,box-shadow .2s,background .2s,border-color .2s;
+}
+.e404-btn.primary{background:var(--color-brand,#F39200);color:#fff}
+.e404-btn.primary:hover{transform:translateY(-2px);box-shadow:var(--shadow-brand,0 10px 28px rgba(243,146,0,.28))}
+.e404-btn.ghost{background:transparent;color:var(--color-dark,#444);border:1.5px solid var(--border-soft,#e6e6e6)}
+.e404-btn.ghost:hover{border-color:var(--color-dark,#444)}
+.e404-btn i{width:18px;height:18px}
+.e404-foot{text-align:center;padding:22px;color:#a0a0a0;font-size:.78rem;border-top:1px solid var(--border-soft,#e6e6e6);background:var(--color-white,#fff)}
+</style>
+</head>
+<body>
+
+<header class="e404-top">
+  <a class="e404-logo" href="/">BLACK<span>QUACK</span></a>
+</header>
+
+<main class="e404-main">
+  <!-- Pato de marca; si falta el SVG, simplemente no se muestra. -->
+  <img class="e404-duck" src="/images/blacky-3.svg" alt="" onerror="this.style.display='none'">
+  <p class="e404-code">404</p>
+  <h1 class="e404-title">Este pato se perdió 🦆</h1>
+  <p class="e404-sub">La página que buscas no existe o cambió de lugar. Volvamos a terreno conocido.</p>
+  <div class="e404-actions">
+    <a class="e404-btn primary" href="/"><i data-lucide="home"></i> Volver al inicio</a>
+    <a class="e404-btn ghost" href="/tienda.html"><i data-lucide="shopping-bag"></i> Ir a la tienda</a>
+  </div>
+</main>
+
+<footer class="e404-foot">BlackQuack · Hecho con 🦆 en Chile</footer>
+
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<script>window.lucide && lucide.createIcons();</script>
+</body>
+</html>
