@@ -42,12 +42,18 @@ body{background:var(--color-white);overflow-x:clip}
 .fb-btn i{width:19px;height:19px}
 
 /* ---------- HERO con video de fondo ---------- */
-.fb-hero{position:relative;min-height:92vh;display:flex;align-items:center;overflow:hidden;
+.fb-hero{position:relative;min-height:66vh;display:flex;align-items:center;overflow:hidden;
   /* Fallback de marca si el video no carga / no existe aún */
   background:linear-gradient(135deg,#1a1a1a 0%,#2a2118 55%,#3a2c10 100%)}
+@media(max-width:720px){.fb-hero{min-height:74vh}}
 .fb-hero-video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0}
 .fb-hero-scrim{position:absolute;inset:0;z-index:1;
   background:linear-gradient(90deg,rgba(10,10,10,.82) 0%,rgba(10,10,10,.55) 45%,rgba(10,10,10,.25) 100%)}
+/* Trama de puntos sobre el video: junto con el degradado, asienta el texto y da
+   textura sin restar legibilidad (dots blancos muy sutiles). */
+.fb-hero::after{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;
+  background-image:radial-gradient(rgba(255,255,255,.13) 1.2px, transparent 1.5px);
+  background-size:16px 16px}
 .fb-hero-inner{position:relative;z-index:2;max-width:var(--maxw);margin:0 auto;padding:clamp(40px,7vw,90px) clamp(16px,4vw,44px);width:100%}
 .fb-hero-box{max-width:640px;color:#fff}
 .fb-eyebrow{display:inline-block;font-family:var(--font-mono);font-size:.8rem;letter-spacing:.18em;text-transform:uppercase;
