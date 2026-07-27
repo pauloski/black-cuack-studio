@@ -11,9 +11,19 @@ Checkout en página con stepper y **despacho multi-courier**: retiro en Punto Bl
 (Blue Express, tarifa de tabla) y despacho a domicilio cotizado en vivo con
 Chilexpress, elegibles por ambiente vía `SHIPPING_METHODS` (rama `feat/chilexpress-envio`).
 
-**Última actualización:** 26 julio 2026, 11:18 (hora Chile, UTC−04).
+**Última actualización:** 27 julio 2026, 02:49 (hora Chile, UTC−04).
 
 > **Registro de cambios (para lectura por otras IA):**
+> - **2026-07-27** — **Botón flotante de WhatsApp** configurable 100% desde
+>   Contentful (número, mensajes, on/off, horario por días+horas en hora de Chile).
+>   `js/whatsapp.js` + content type `whatsappWidget`. Ver §14 y `docs/whatsapp-widget.md`.
+> - **2026-07-27** — **SEO: datos estructurados schema.org** (JSON-LD `Product`/`Offer`)
+>   inyectados en la PDP con precio (CLP) y disponibilidad desde el stock en vivo. Ver §15.
+> - **2026-07-27** — **Página 404 de marca** (`404.html`) con rutas absolutas: Cloudflare
+>   Pages la sirve en rutas inexistentes; antes salía sin estilos. Ver §16.
+> - **2026-07-27** — **Diagramas de arquitectura** en `docs/arquitectura.drawio`
+>   (diagrams.net, 4 pestañas). **Diagnóstico SII** (boleta/factura con SimpleAPI) en
+>   `SII-FACTURACION-ELECTRONICA.md` (evaluación, sin implementar).
 > - **2026-07-26 11:18** — Rate limiting extendido al webhook de Flow: la regla WAF
 >   `BQ throttle checkout` ahora cubre `POST /api/checkout` **y** `POST /api/flow/confirm`
 >   (mitiga amplificación/DoS por tokens falsos que forzarían llamadas salientes a Flow).
@@ -748,3 +758,64 @@ una, por diseño "cero build step" del frontend). Al forkear se ajustan en paral
 **Checklist mínimo de fork:** `brand.js` (prefijo+nombre) · `js/config.js` (BRAND) ·
 `css/bq-v5.css` (colores) · logo en `images/` · find/replace del nombre en HTML ·
 `CF_ZONE_ID` + `setup-ratelimit.sh` · secrets de Flow/Chilexpress del cliente.
+
+---
+
+## 14. Botón flotante de WhatsApp (configurable desde Contentful)
+
+`js/whatsapp.js` — widget autocontenido (inyecta su propio CSS + DOM) incluido en
+las páginas públicas (no en `checkout` ni `admin`). Lee **una** entrada del content
+type `whatsappWidget` en Contentful; **todo** se controla desde el CMS, sin tocar
+código:
+
+| Campo (Contentful) | Efecto |
+|---|---|
+| `activo` (Boolean) | Interruptor maestro mostrar/ocultar |
+| `telefono` | Número con código país sin `+` (ej. `56912345678`) |
+| `mensajePredeterminado` | Texto pre-rellenado en el chat |
+| `saludo` | Burbuja de saludo (opcional) |
+| `diasDisponibles` (lista) | Días disponibles (`lunes`…`domingo`, con/sin tilde) |
+| `horaInicio` / `horaFin` | Ventana horaria `HH:MM` |
+| `ocultarFueraDeHorario` | `true`: oculta fuera de horario · `false`: muestra en gris |
+| `mensajeFueraDeHorario` | Texto alterno fuera de horario |
+
+- **Horario evaluado en hora de Chile** (`America/Santiago`), no la del visitante.
+  Dentro de horario → verde con punto "en línea"; fuera → gris (o oculto).
+- Caché de 5 min en `sessionStorage`; **falla en silencio** si Contentful no
+  responde. No pinta nada hasta que exista el content type + entrada publicada.
+- Detalle de operación y modelo exacto en `docs/whatsapp-widget.md`.
+- **Limitación:** una sola ventana horaria para todos los días (sin horarios por
+  día ni corte de colación).
+
+## 15. SEO — datos estructurados schema.org (JSON-LD)
+
+La PDP inyecta un `<script type="application/ld+json">` con un `Product` para rich
+snippets de Google (`injectProductSchema` en `js/bq-v5.js`):
+
+- `name`, `image` (descarta el placeholder), `description` (texto plano), `sku`,
+  `brand`.
+- `Offer` con `priceCurrency: CLP` y `price`; **`AggregateOffer`** (`lowPrice`/
+  `highPrice`/`offerCount`) cuando las variantes tienen distinto precio.
+- `availability` (`InStock`/`OutOfStock`) calculada desde el **stock EN VIVO** (D1)
+  → se inyecta tras `/api/stock`. `itemCondition: NewCondition` + URL canónica.
+- Se inserta **por JS** (la PDP se renderiza en el cliente; Googlebot ejecuta JS).
+  Un render server-side sería más robusto pero excede el diseño "cero build step".
+- Validar con Rich Results Test usando la **URL** (no pegando el código, porque es
+  dinámico).
+
+## 16. Página 404
+
+`404.html` en la raíz — Cloudflare Pages la sirve automáticamente (status 404) en
+cualquier ruta inexistente, **conservando la URL pedida**. Por eso usa **rutas
+absolutas** (`/css/…`, `/images/…`): antes, una URL profunda inexistente resolvía
+los assets relativos contra el path pedido y la página salía sin estilos.
+Autocontenida (no depende del header/nav por JS) y de marca.
+
+## 17. Diagramas y diagnósticos (docs/)
+
+- `docs/arquitectura.drawio` — diagramas editables en diagrams.net (4 pestañas:
+  sistema, checkout+pago, datos/stock, despliegue).
+- `SII-FACTURACION-ELECTRONICA.md` — diagnóstico (sin implementar) de emitir
+  boleta/factura electrónica vía SimpleAPI: viabilidad, prerrequisitos tributarios,
+  encaje en `flow/confirm.js` con `dte_state` idempotente. Decisión: arrancar por
+  boleta; factura en fase 2.
