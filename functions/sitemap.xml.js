@@ -11,7 +11,7 @@ import { getCatalog } from './_lib/catalog.js';
 
 // Páginas públicas indexables. Se excluyen a propósito checkout, admin, gracias y
 // seguimiento (transaccionales / noindex).
-const STATIC_PATHS = ['/', '/tienda.html', '/nosotros.html', '/contacto.html', '/labs.html', '/talleres.html'];
+const STATIC_PATHS = ['/', '/tienda.html', '/flipbook.html', '/nosotros.html', '/contacto.html', '/labs.html', '/talleres.html'];
 
 function escapeXml(s) {
   return String(s).replace(/[&<>"']/g, (c) => (
