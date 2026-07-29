@@ -11,9 +11,15 @@ Checkout en página con stepper y **despacho multi-courier**: retiro en Punto Bl
 (Blue Express, tarifa de tabla) y despacho a domicilio cotizado en vivo con
 Chilexpress, elegibles por ambiente vía `SHIPPING_METHODS` (rama `feat/chilexpress-envio`).
 
-**Última actualización:** 27 julio 2026, 02:49 (hora Chile, UTC−04).
+**Última actualización:** 29 julio 2026 (hora Chile, UTC−04).
 
 > **Registro de cambios (para lectura por otras IA):**
+> - **2026-07-29** — **App de Contentful para el stock vivo** (`contentful-stock.html`):
+>   barra lateral en la entrada `product` que lee `/api/admin/stock` y ajusta por
+>   DELTA (`+ Ingreso` / `− Salida`) vía `/api/admin/stock-adjust`, con confirmación
+>   al descontar y motivo al `stock_ledger`. HTML estático servido desde el propio
+>   Pages (mismo origen → sin CORS); **backend sin cambios**. Gestión de stock vivo
+>   "en un solo lugar" para gente no técnica, sin salir de Contentful. Ver §8.2.
 > - **2026-07-27** — **Botón flotante de WhatsApp** configurable 100% desde
 >   Contentful (número, mensajes, on/off, horario por días+horas en hora de Chile).
 >   `js/whatsapp.js` + content type `whatsappWidget`. Ver §14 y `docs/whatsapp-widget.md`.
@@ -559,6 +565,35 @@ npx wrangler secret put FLOW_SECRET_KEY
 - **Observability activada** (`observability.logs` en `wrangler.toml`): los
   `console.log('[cron-sweep]', ...)` se persisten en el dashboard (pestaña
   Observability del Worker), sin necesidad de `wrangler tail`.
+
+### 8.2 App de Contentful — stock vivo desde el sidebar (`contentful-stock.html`)
+
+Para gestionar el **stock vivo sin salir de Contentful** (un solo lugar para gente
+no técnica), hay una **App de barra lateral** servida como HTML estático **desde el
+propio Pages** (`/contentful-stock.html`). Al vivir en el mismo dominio, sus
+llamadas a `/api/admin/*` son del **mismo origen** (sin CORS) y **el backend no
+cambia**: reutiliza tal cual los endpoints de §8.
+
+- **Qué hace:** en la entrada `product` lee el código (campo `id`), consulta
+  `/api/admin/stock?product=<id>` y muestra el stock vivo por SKU (con "inicial" de
+  Contentful para ver el desfase). Ajusta por DELTA con `+ Ingreso` / `− Salida`
+  llamando a `/api/admin/stock-adjust`.
+- **No unifica la base de datos, unifica la pantalla:** D1 sigue siendo la verdad
+  atómica del stock; la App es solo una interfaz alternativa a la pestaña
+  "Inventario" de `admin.html`, incrustada en el CMS.
+- **Salvaguardas:** confirmación nativa (`sdk.dialogs.openConfirm`) **solo al
+  descontar**; pre-chequeo de no restar más de lo disponible (el backend igual lo
+  blinda con `CHECK (qty >= 0)`); cada ajuste queda en `stock_ledger` con su motivo
+  (venta presencial, merma, ingreso a bodega…). Cubre el caso de **ventas fuera de
+  la tienda** (descuento manual) además del restock.
+- **Secreto fuera del código:** el `adminSecret` viaja por los **parámetros de la
+  App** en Contentful (`sdk.parameters.instance`/`installation`), no en el HTML —
+  el archivo es inofensivo si se abre suelto. Mismo modelo de confianza que
+  `admin.html` (el secreto llega al navegador del operador de confianza).
+- **Registro en Contentful:** App custom → Frontend URL
+  `https://blackquack.cl/contentful-stock` → location **Entry sidebar** →
+  parámetros `adminSecret` (req.), `apiBase` (vacío = mismo origen), `codeField`
+  (`id`), `lowThreshold` (`3`) → asignada al content type `product`.
 
 ---
 

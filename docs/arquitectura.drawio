@@ -70,6 +70,12 @@
         <mxCell id="s_e12" value="getStatus (red de seguridad)" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;dashed=1;" edge="1" parent="1" source="s_cron" target="s_flow">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
+        <mxCell id="s_cfapp" value="Contentful App (sidebar)&#10;Stock en vivo · contentful-stock.html&#10;gestiona stock vivo desde el CMS" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="30" y="70" width="290" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="s_e13" value="ajuste ± stock (x-admin-secret)&#10;/api/admin/stock · stock-adjust" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;" edge="1" parent="1" source="s_cfapp" target="s_fn">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
       </root>
     </mxGraphModel>
   </diagram>
@@ -159,6 +165,10 @@
         <mxCell id="d_e2" value="cada movimiento escribe ledger" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;" edge="1" parent="1" source="d_stock" target="d_ledger"><mxGeometry relative="1" as="geometry" /></mxCell>
         <mxCell id="d_e3" value="lines referencian product/variant/qty" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;dashed=1;" edge="1" parent="1" source="d_order" target="d_stock"><mxGeometry relative="1" as="geometry" /></mxCell>
         <mxCell id="d_e4" value="resuelve token" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;" edge="1" parent="1" source="d_ordercode" target="d_order"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="d_cfapp" value="Contentful App (sidebar) / admin.html&#10;adjustStock: qty = qty + delta (±)&#10;CHECK (qty&gt;=0) · ledger reason 'adjust'" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="440" y="240" width="340" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="d_e5" value="ajuste manual ± (ingreso / salida)" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;" edge="1" parent="1" source="d_cfapp" target="d_stock"><mxGeometry relative="1" as="geometry" /></mxCell>
       </root>
     </mxGraphModel>
   </diagram>
