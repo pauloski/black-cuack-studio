@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stock en vivo — App de Contentful (BlackQuack)</title>
+<!-- App de barra lateral de Contentful para gestionar el STOCK VIVO (D1) desde la
+     misma entrada de producto. No enlazada desde el sitio público.
+
+     Cómo funciona:
+     - Corre dentro de un iframe de Contentful, servido desde ESTE dominio (Pages),
+       así que las llamadas a /api/admin/* son del MISMO origen → sin CORS.
+     - Lee el código del producto desde el campo de la entrada (por defecto `id`).
+     - Muestra el stock vivo de D1 y permite ajustarlo por DELTA (+ ingreso / − salida).
+     - El descuento tiene piso atómico en el backend (CHECK qty>=0) y queda en el ledger.
+
+     El SECRETO NO vive en este archivo: llega desde los "parámetros de instalación"
+     de la App en Contentful (sdk.parameters.installation.adminSecret). Por eso este
+     HTML es inofensivo si se abre suelto en el navegador. -->
+<meta name="robots" content="noindex, nofollow">
+<script src="https://unpkg.com/@contentful/app-sdk@4"></script>
+<style>
+  :root{
+    --brand:#F39200; --brand-ink:#b96e00;
+    --up:#1a7f37; --down:#C0392B; --amber:#b7791f;
+    --ink:#1b1b1b; --muted:#6b7280; --line:#e5e7eb; --bg:#fff; --soft:#f7f7f8;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    color:var(--ink); background:transparent; font-size:14px; line-height:1.45;
+    padding:2px;
+  }
+  .head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 10px}
+  .head h1{font-size:.8rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0;font-weight:700}
+  .refresh{border:1px solid var(--line);background:var(--bg);color:var(--muted);border-radius:8px;
+    padding:5px 9px;font-size:.72rem;font-weight:600;cursor:pointer}
+  .refresh:hover{border-color:#bbb;color:var(--ink)}
+  .refresh:disabled{opacity:.5;cursor:default}
+
+  .note{border-radius:9px;padding:10px 12px;font-size:.82rem;line-height:1.5;margin-bottom:10px}
+  .note.info{background:#eef2ff;border:1px solid #dbe2ff;color:#3b4a86}
+  .note.err{background:#fdecec;border:1px solid #f6cccc;color:#8a2020}
+
+  .card{border:1px solid var(--line);border-radius:11px;padding:12px;margin-bottom:9px;background:var(--bg)}
+  .card .lbl{font-weight:700;font-size:.9rem;margin:0 0 2px}
+  .card .lbl .simple{color:var(--muted);font-weight:600}
+  .qtyline{display:flex;align-items:baseline;gap:8px;margin:2px 0 10px}
+  .qtyline .live{font-size:1.7rem;font-weight:800;line-height:1}
+  .qtyline .live.zero{color:var(--down)}
+  .qtyline .live.low{color:var(--amber)}
+  .qtyline .ini{font-size:.72rem;color:var(--muted)}
+  .qtyline .tag{font-size:.62rem;font-weight:800;text-transform:uppercase;letter-spacing:.05em;
+    padding:2px 6px;border-radius:6px}
+  .qtyline .tag.zero{background:#fdecec;color:var(--down)}
+  .qtyline .tag.low{background:#fdf3e2;color:var(--amber)}
+
+  .controls{display:flex;flex-wrap:wrap;gap:6px;align-items:stretch}
+  .controls select,.controls input{border:1.4px solid var(--line);border-radius:8px;
+    font-size:.8rem;padding:7px 8px;background:var(--bg);color:var(--ink);font-family:inherit}
+  .controls select{flex:1 1 100%;min-width:0}
+  .controls input.qty{width:56px;text-align:center;font-weight:700}
+  .controls .btn{flex:1 1 0;min-width:84px;border:none;border-radius:8px;padding:8px 6px;
+    font-weight:700;font-size:.8rem;cursor:pointer;color:#fff;display:inline-flex;
+    align-items:center;justify-content:center;gap:5px}
+  .controls .btn.in{background:var(--up)}
+  .controls .btn.in:hover{filter:brightness(1.06)}
+  .controls .btn.out{background:var(--down)}
+  .controls .btn.out:hover{filter:brightness(1.06)}
+  .controls .btn:disabled{opacity:.5;cursor:default;filter:none}
+
+  .skeleton{color:var(--muted);font-size:.85rem;padding:6px 2px}
+  .foot{color:var(--muted);font-size:.7rem;margin-top:6px;line-height:1.5}
+  code{background:var(--soft);padding:1px 5px;border-radius:5px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.85em}
+</style>
+</head>
+<body>
+  <div class="head">
+    <h1>Stock en vivo</h1>
+    <button class="refresh" id="refresh" title="Recargar">↻ Recargar</button>
+  </div>
+  <div id="root"><div class="skeleton">Cargando…</div></div>
+  <div class="foot" id="foot"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  // --- Motivos sugeridos para el ajuste manual (quedan en el ledger). ---
+  var MOTIVOS = [
+    'Venta presencial',
+    'Merma / daño',
+    'Ingreso a bodega',
+    'Devolución',
+    'Corrección de conteo'
+  ];
+
+  var root = document.getElementById('root');
+  var foot = document.getElementById('foot');
+  var refreshBtn = document.getElementById('refresh');
+
+  // El SDK expone el global `contentfulApp` (UMD). Fallback al de extensiones por si acaso.
+  var sdkApi = window.contentfulApp || window.contentfulExtension;
+  if (!sdkApi || typeof sdkApi.init !== 'function') {
+    root.innerHTML = noteHtml('info',
+      'Esta página es la App de stock y solo funciona <b>dentro de Contentful</b>, ' +
+      'en la barra lateral de un producto. Abierta suelta no hace nada.');
+    return;
+  }
+
+  sdkApi.init(function (sdk) {
+    // Ajusta la altura del iframe automáticamente al contenido.
+    if (sdk.window && sdk.window.startAutoResizer) sdk.window.startAutoResizer();
+
+    // Aceptamos ambos "buckets": instance (por asignación al content type) e
+    // installation (por instalación). Instance pisa a installation si ambos existen.
+    var params = Object.assign(
+      {},
+      (sdk.parameters && sdk.parameters.installation) || {},
+      (sdk.parameters && sdk.parameters.instance) || {}
+    );
+    var apiBase = (params.apiBase || '').replace(/\/+$/, ''); // '' = mismo origen
+    var secret  = params.adminSecret || '';
+    var codeField = params.codeField || 'id';                 // campo con el código (BQ-00x)
+    var lowAt   = parseInt(params.lowThreshold, 10);
+    if (!isFinite(lowAt)) lowAt = 3;
+
+    if (!secret) {
+      root.innerHTML = noteHtml('err',
+        'Falta el <b>secreto de administración</b> en la configuración de la App. ' +
+        'Ábrela en <i>Apps → Manage → esta app</i> y pega <code>adminSecret</code> ' +
+        '(el mismo <code>ADMIN_RESYNC_SECRET</code> del backend).');
+      return;
+    }
+
+    // Código del producto desde la entrada. Puede no existir aún si es un producto nuevo.
+    var code = '';
+    try {
+      var field = sdk.entry && sdk.entry.fields && sdk.entry.fields[codeField];
+      code = field && field.getValue ? (field.getValue() || '') : '';
+      // Si el campo cambia de valor, recargamos.
+      if (field && field.onValueChanged) field.onValueChanged(function () {
+        var nv = field.getValue() || '';
+        if (nv !== code) { code = nv; load(); }
+      });
+    } catch (e) { /* sin campo → lo avisamos abajo */ }
+
+    if (!code) {
+      root.innerHTML = noteHtml('info',
+        'Este producto todavía no tiene <b>código</b> (campo <code>' + esc(codeField) + '</code>). ' +
+        'Complétalo y <b>guarda</b> para ver y gestionar su stock.');
+      return;
+    }
+
+    // ---- helpers de red ----
+    function api(path, opts) {
+      opts = opts || {};
+      opts.headers = opts.headers || {};
+      opts.headers['x-admin-secret'] = secret;
+      return fetch(apiBase + path, opts).then(function (res) {
+        return res.json().catch(function () { return {}; }).then(function (body) {
+          if (!res.ok) throw new Error(body && body.error ? body.error : ('Error ' + res.status));
+          return body;
+        });
+      });
+    }
+
+    // ---- carga y render ----
+    function load() {
+      refreshBtn.disabled = true;
+      root.innerHTML = '<div class="skeleton">Cargando stock de <b>' + esc(code) + '</b>…</div>';
+      foot.textContent = '';
+      api('/api/admin/stock?product=' + encodeURIComponent(code))
+        .then(function (data) {
+          var prod = (data.products || []).find(function (p) { return p.product === code; })
+                     || (data.products && data.products[0]);
+          if (!prod || !prod.skus || !prod.skus.length) {
+            root.innerHTML = noteHtml('info', 'Sin variantes materializadas en D1 para <b>' + esc(code) + '</b>.');
+            return;
+          }
+          render(prod);
+        })
+        .catch(function (err) {
+          root.innerHTML = noteHtml('err', 'No se pudo leer el stock: ' + esc(err.message));
+        })
+        .then(function () { refreshBtn.disabled = false; });
+    }
+
+    function render(prod) {
+      root.innerHTML = '';
+      prod.skus.forEach(function (sku) {
+        root.appendChild(cardFor(prod.product, sku));
+      });
+      foot.innerHTML = 'Verdad del stock vivo (D1). Cada ajuste queda en la bitácora. ' +
+        '<b>+ Ingreso</b> repone · <b>− Salida</b> descuenta (venta presencial, merma…).';
+    }
+
+    function cardFor(productId, sku) {
+      var live = Number(sku.vivo) || 0;
+      var cls = live === 0 ? 'zero' : (live <= lowAt ? 'low' : '');
+      var tag = live === 0 ? '<span class="tag zero">Agotado</span>'
+              : (live <= lowAt ? '<span class="tag low">Bajo</span>' : '');
+
+      var card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML =
+        '<div class="lbl">' + (sku.label ? esc(sku.label) : '<span class="simple">Producto simple</span>') + '</div>' +
+        '<div class="qtyline">' +
+          '<span class="live ' + cls + '">' + live + '</span>' +
+          tag +
+          '<span class="ini">inicial ' + (Number(sku.inicial) || 0) + '</span>' +
+        '</div>' +
+        '<div class="controls">' +
+          '<select class="motivo">' + MOTIVOS.map(function (m) {
+            return '<option>' + esc(m) + '</option>';
+          }).join('') + '</select>' +
+          '<input class="qty" type="number" min="1" step="1" value="1" inputmode="numeric">' +
+          '<button class="btn in" type="button">+ Ingreso</button>' +
+          '<button class="btn out" type="button">− Salida</button>' +
+        '</div>';
+
+      var qtyInput = card.querySelector('.qty');
+      var motivoSel = card.querySelector('.motivo');
+      var liveEl = card.querySelector('.live');
+      var tagEl = card.querySelector('.tag');
+      var iniEl = card.querySelector('.ini');
+      var btnIn = card.querySelector('.btn.in');
+      var btnOut = card.querySelector('.btn.out');
+
+      function readQty() {
+        var n = Math.trunc(Number(qtyInput.value));
+        return (isFinite(n) && n > 0) ? n : 0;
+      }
+
+      function repaint(newLive) {
+        liveEl.textContent = newLive;
+        liveEl.className = 'live ' + (newLive === 0 ? 'zero' : (newLive <= lowAt ? 'low' : ''));
+        if (tagEl) tagEl.remove();
+        // (el tag se recalcula en la próxima recarga; basta con el color aquí)
+      }
+
+      function apply(sign) {
+        var qty = readQty();
+        if (!qty) { sdk.notifier.error('Ingresa una cantidad mayor a 0.'); return; }
+        var delta = sign * qty;
+        var motivo = motivoSel.value || 'ajuste manual';
+        var curLive = Number(liveEl.textContent) || 0;
+
+        // Pre-chequeo de UX: no dejar restar más de lo disponible (el backend igual lo blinda).
+        if (delta < 0 && qty > curLive) {
+          sdk.notifier.error('Solo hay ' + curLive + ' disponibles de ' + (sku.label || 'este producto') + '.');
+          return;
+        }
+
+        var go = Promise.resolve(true);
+        if (delta < 0) {
+          go = sdk.dialogs.openConfirm({
+            title: 'Confirmar salida',
+            message: 'Vas a descontar ' + qty + ' de "' + (sku.label || productId) +
+                     '". Quedarán ' + (curLive - qty) + '. Motivo: ' + motivo + '.',
+            intent: 'negative',
+            confirmLabel: 'Descontar ' + qty,
+            cancelLabel: 'Cancelar'
+          });
+        }
+
+        go.then(function (ok) {
+          if (!ok) return;
+          btnIn.disabled = btnOut.disabled = true;
+          return api('/api/admin/stock-adjust', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ product: productId, variantKey: sku.variantKey, delta: delta, motivo: motivo })
+          }).then(function (r) {
+            repaint(Number(r.new));
+            sdk.notifier.success(
+              (delta > 0 ? '+' : '') + delta + ' aplicado. ' +
+              (sku.label ? sku.label + ': ' : '') + r.old + ' → ' + r.new + '.'
+            );
+          }).catch(function (err) {
+            sdk.notifier.error(err.message || 'No se pudo ajustar.');
+          }).then(function () {
+            btnIn.disabled = btnOut.disabled = false;
+          });
+        });
+      }
+
+      btnIn.addEventListener('click', function () { apply(+1); });
+      btnOut.addEventListener('click', function () { apply(-1); });
+      return card;
+    }
+
+    refreshBtn.addEventListener('click', load);
+    load();
+  });
+
+  // ---- utilidades ----
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+  function noteHtml(kind, html) {
+    return '<div class="note ' + kind + '">' + html + '</div>';
+  }
+})();
+</script>
+</body>
+</html>
