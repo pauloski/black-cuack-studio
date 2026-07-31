@@ -6,9 +6,6 @@
 (function () {
   'use strict';
 
-  var CFG = window.BQ_CONFIG || {};
-  var CDN = 'https://cdn.contentful.com';
-
   /* Los originales del space pesan ~23MB y miden 7339px de ancho. La Images API
      los redimensiona en el edge de Contentful: sin esto la tienda es injugable. */
   var IMG = { main: 'fm=webp&q=80&w=1200&h=1200&fit=fill', view: 'fm=webp&q=75&w=900' };
@@ -114,21 +111,13 @@
   }
 
   async function fetchProducts() {
-    if (!CFG.CONTENTFUL_SPACE_ID || !CFG.CONTENTFUL_ACCESS_TOKEN) {
-      throw new Error('BQ_CONFIG incompleto: falta space id o access token.');
-    }
-
-    var url = CDN + '/spaces/' + CFG.CONTENTFUL_SPACE_ID +
-      '/environments/' + (CFG.CONTENTFUL_ENVIRONMENT || 'master') + '/entries' +
-      '?access_token=' + encodeURIComponent(CFG.CONTENTFUL_ACCESS_TOKEN) +
-      '&content_type=' + (CFG.CONTENTFUL_CONTENT_TYPE || 'product') +
-      // include=2 para resolver variants (referencias) en una sola llamada.
-      '&include=2&limit=100&order=fields.id';
-
-    var res = await fetch(url, { cache: 'no-store' });
+    // Lee desde nuestra Function cacheada en el edge (/api/catalog) en vez de pegarle
+    // a Contentful directo: 1 llamada CDA por minuto por edge en vez de 1 por visita.
+    // Devuelve el MISMO JSON crudo de la CDA, así el mapeo de abajo no cambia.
+    var res = await fetch('/api/catalog');
     if (!res.ok) {
       var detail = await res.text().catch(function () { return ''; });
-      throw new Error('Contentful ' + res.status + ': ' + detail.slice(0, 200));
+      throw new Error('Catálogo ' + res.status + ': ' + detail.slice(0, 200));
     }
 
     var data = await res.json();
