@@ -20,7 +20,9 @@
    text) SIN cambios. La respuesta de la CDA no incluye el token → seguro reenviarla. */
 
 const CDN = 'https://cdn.contentful.com';
-const TTL = 60; // s. El catálogo no cambia por segundo; subir si se quiere menos frescura.
+const TTL = 300; // s (5 min). El catálogo cambia rara vez; un cambio de precio/texto
+                 // en Contentful tarda hasta 5 min en verse. El stock EN VIVO NO se ve
+                 // afectado (va por /api/stock, con su propia caché de 15 s).
 
 function err(msg, status) {
   return new Response(JSON.stringify({ error: msg }), {

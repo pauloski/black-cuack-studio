@@ -21,14 +21,8 @@
 (function () {
   'use strict';
 
-  var CFG = window.BQ_CONFIG || {};
-  // Fallback a los mismos valores PÚBLICos de js/config.js (CDA es read-only y ya
-  // viaja al navegador). Permite que el widget funcione en páginas que no cargan
-  // config.js. Si el token CDA rota, actualizar aquí y en js/config.js.
-  var SPACE = CFG.CONTENTFUL_SPACE_ID || 'jsyka3qmf5vm';
-  var TOKEN = CFG.CONTENTFUL_ACCESS_TOKEN || 'eRQByYc_-IOt1625TvG7jWTv59-ZjGzfb9S_ZeGPLww';
-  var ENV = CFG.CONTENTFUL_ENVIRONMENT || 'master';
-  var CDN = 'https://cdn.contentful.com';
+  // La config se lee vía /api/whatsapp-config (Function cacheada en el edge), así que
+  // el widget ya NO necesita el space/token de Contentful en el navegador.
 
   var CACHE_KEY = 'bq_wa_cfg';
   var CACHE_TTL = 5 * 60 * 1000; // 5 min: evita refetch en cada navegación.
@@ -92,11 +86,10 @@
       var c = JSON.parse(sessionStorage.getItem(CACHE_KEY) || 'null');
       if (c && (Date.now() - c.t) < CACHE_TTL) return c.v;
     } catch (e) {}
-    var url = CDN + '/spaces/' + SPACE + '/environments/' + ENV + '/entries' +
-      '?access_token=' + encodeURIComponent(TOKEN) +
-      '&content_type=whatsappWidget&limit=1';
-    var res = await fetch(url, { cache: 'no-store' });
-    if (!res.ok) throw new Error('Contentful ' + res.status);
+    // Lee desde nuestra Function cacheada en el edge (/api/whatsapp-config): el
+    // visitante NUEVO también sale del edge, no del cupo de API de Contentful.
+    var res = await fetch('/api/whatsapp-config');
+    if (!res.ok) throw new Error('whatsapp-config ' + res.status);
     var data = await res.json();
     var item = (data.items || [])[0];
     var cfg = item ? item.fields : null;

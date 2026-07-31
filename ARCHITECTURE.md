@@ -11,9 +11,18 @@ Checkout en página con stepper y **despacho multi-courier**: retiro en Punto Bl
 (Blue Express, tarifa de tabla) y despacho a domicilio cotizado en vivo con
 Chilexpress, elegibles por ambiente vía `SHIPPING_METHODS` (rama `feat/chilexpress-envio`).
 
-**Última actualización:** 29 julio 2026 (hora Chile, UTC−04).
+**Última actualización:** 31 julio 2026 (hora Chile, UTC−04).
 
 > **Registro de cambios (para lectura por otras IA):**
+> - **2026-07-31** — **Catálogo cacheado en el edge** (`functions/api/catalog.js`):
+>   el storefront leía Contentful directo en cada carga (`cache:'no-store'` en
+>   `js/api.js`) → 1 llamada CDA por visita, que escala 1:1 con el tráfico y presiona
+>   el cupo Free de **100K llamadas/mes** de Contentful. Ahora `js/api.js` lee de
+>   `/api/catalog`, una Function con **caché explícita del edge** (`caches.default`,
+>   TTL 5 min) + `cf.cacheEverything`: las llamadas CDA del catálogo quedan
+>   **desacopladas del tráfico** (~1/min por colo). Header `x-bq-cache: HIT|MISS`
+>   para verificar. **Ídem la config del widget de WhatsApp** (`/api/whatsapp-config`,
+>   `js/whatsapp.js`): tras esto el **frontend ya no toca Contentful directo**. Ver §18.
 > - **2026-07-29** — **App de Contentful para el stock vivo** (`contentful-stock.html`):
 >   barra lateral en la entrada `product` que lee `/api/admin/stock` y ajusta por
 >   DELTA (`+ Ingreso` / `− Salida`) vía `/api/admin/stock-adjust`, con confirmación
@@ -854,3 +863,71 @@ Autocontenida (no depende del header/nav por JS) y de marca.
   boleta/factura electrónica vía SimpleAPI: viabilidad, prerrequisitos tributarios,
   encaje en `flow/confirm.js` con `dte_state` idempotente. Decisión: arrancar por
   boleta; factura en fase 2.
+
+---
+
+## 18. Postura de plan Free y catálogo cacheado en el edge
+
+Objetivo de diseño: **mantener la infraestructura en los planes gratuitos el mayor
+tiempo posible**, incluso con publicidad. Los límites reales y quién los toca:
+
+| Recurso | Sirve | Límite Free | Riesgo |
+|---|---|---|---|
+| **Cloudflare Pages** | HTML/JS/CSS, **el video de fondo**, estáticos | ancho de banda **ilimitado** | ninguno |
+| **Contentful — asset bandwidth** | fotos de producto | 50 GB/mes | bajo (ya WebP) |
+| **Contentful — API calls** | JSON del catálogo + config del widget | **100K/mes** (CMA+CDA+CPA+GraphQL) | el que hay que cuidar |
+
+Notas clave para un auditor:
+- **El video pesado NO cuenta** contra ningún cupo: lo sirve Pages (banda ilimitada).
+- **Las imágenes ya salen WebP redimensionadas** por la Images API de Contentful
+  (`js/api.js` → `IMG = { main:'fm=webp&q=80&w=1200…', view:'fm=webp&q=75&w=900' }`).
+  Sin eso, los originales de ~23 MB harían injugable la tienda. El uso de banda es
+  marginal (decenas de MB).
+- **El grueso del uso de API suele ser CMA** (edición humana en Contentful: modelar
+  content types, editar entradas, la app de stock del sidebar). Es costo de *setup*,
+  acotado por el trabajo manual, no por el tráfico. No se optimiza: es uso legítimo.
+
+### 18.1 `/api/catalog` — proxy del catálogo cacheado en el edge
+
+El único consumo de **CDA que escalaba 1:1 con el tráfico** era el storefront: antes
+`js/api.js` leía `cdn.contentful.com` directo con `cache:'no-store'` → **1 llamada
+CDA por visita**. Con publicidad, eso apuntaba al cupo de 100K.
+
+Solución (`functions/api/catalog.js`): el frontend lee de **`/api/catalog`**, una
+Pages Function que proxya la CDA con **dos capas de caché**:
+1. **Cache API del edge** (`caches.default`, TTL 5 min): en un HIT la Function
+   retorna **sin llamar a Contentful**. Observable por `x-bq-cache: HIT|MISS`.
+2. **`cf.cacheEverything`** sobre la subrequest a Contentful: segunda red si la
+   Cache API está fría en ese colo.
+
+Devuelve el **JSON crudo de la CDA** (items + `includes.Asset` + `includes.Entry`),
+así `js/api.js` conserva su mapeo (WebP, variantes, rich text) **sin cambios**. La
+respuesta de la CDA no incluye el token → seguro reenviarla.
+
+Efecto: las llamadas CDA del catálogo quedan **desacopladas del tráfico** (~1 por
+minuto por colo, no 1 por visita). El **stock EN VIVO no pasa por acá**: va por
+`/api/stock` (D1) con su propia caché de 15 s, así el TTL de 5 min del catálogo no
+afecta la frescura del inventario. Un cambio de **precio/texto** en Contentful tarda
+hasta 5 min en verse (aceptable; subir/bajar `TTL` en la Function lo ajusta).
+
+### 18.2 `/api/whatsapp-config` — config del widget cacheada en el edge
+
+Mismo patrón que §18.1, para el otro consumo que escalaba con el tráfico. Antes
+`js/whatsapp.js` leía Contentful directo: su caché en `sessionStorage` (5 min) evita
+repetir el request **durante la navegación**, pero un **visitante nuevo** (caché
+vacía) disparaba **1 llamada CDA** — o sea, ~1 por visitante único, uno de los dos
+techos del plan Free a escala de publicidad.
+
+Solución (`functions/api/whatsapp-config.js`): `js/whatsapp.js` lee de
+**`/api/whatsapp-config`**, una Function con la misma doble caché del edge
+(`caches.default` TTL 5 min + `cf.cacheEverything`, header `x-bq-cache`). Ahora el
+visitante nuevo también sale del edge, no del cupo.
+
+**Resultado global:** el **frontend ya no toca Contentful directamente** — catálogo y
+config del widget van por Functions cacheadas en el edge, así que el consumo de API
+de Contentful queda **desacoplado del tráfico** (~1 llamada por minuto por colo por
+recurso). El token CDA de `js/config.js` quedó **vestigial** (de solo lectura y
+público por diseño; ya nadie lo usa en el navegador — solo se mantiene el bloque
+`BRAND` de ese archivo). El **primer techo** del plan Free pasa a ser la **banda de
+imágenes** (~0,55 MB por visita nueva → ~90K visitas únicas/mes); si algún día se
+supera, la siguiente palanca es proxyear/cachear las imágenes por Cloudflare.
