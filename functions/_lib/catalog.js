@@ -40,6 +40,16 @@ export async function getCatalog(env, opts = {}) {
   const data = await res.json();
   const entries = {};
   for (const e of (data.includes && data.includes.Entry) || []) entries[e.sys.id] = e;
+  // Índice de Assets (imágenes) para resolver el link f.image → URL. Lo usa el feed
+  // de productos (Google Merchant / Meta) y cualquier consumidor server-side.
+  const assets = {};
+  for (const a of (data.includes && data.includes.Asset) || []) assets[a.sys.id] = a;
+  const assetUrl = (link) => {
+    const a = link && link.sys ? assets[link.sys.id] : null;
+    const u = a && a.fields && a.fields.file && a.fields.file.url;
+    if (!u) return '';
+    return u.indexOf('//') === 0 ? 'https:' + u : u;
+  };
 
   const map = new Map();
   for (const entry of data.items || []) {
@@ -64,6 +74,8 @@ export async function getCatalog(env, opts = {}) {
     map.set(f.id, {
       id: f.id,
       product_title: f.product_title || '',
+      description: f.descripcin || f['descripción'] || f.descripcion || '',
+      image_url: assetUrl(f.image),
       price,
       stock: f.stock != null ? Number(f.stock) : null, // fallback simple
       // Peso y dimensiones para cotizar el envío con Chilexpress. Acepta el ID de
