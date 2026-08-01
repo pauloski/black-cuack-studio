@@ -214,14 +214,26 @@ crearlos). El límite atómico de usos es lo que hay que hacer con cuidado.
 | Cupones | (ninguna externa; content type + tabla D1) |
 | SEO+ / Búsqueda | (ninguna externa) |
 
-## Orden de construcción sugerido (impacto/esfuerzo)
+## Estado de construcción (al 2026-08-01)
 
-1. **Búsqueda + autocompletado** (🟢, puro front, se nota al toque).
-2. **Feed Google/Meta** (🟢, habilita pauta — alto ROI).
-3. **SEO+** (🟢 schema/breadcrumbs; 🟡 la Function HTMLRewriter para OG social).
-4. **Cupones** (🟡, must-have de conversión).
-5. **Email transaccional** (🟢, confirmación de compra + estado) → luego campañas acotadas.
-6. **Analítica** (🟢 beacon; dashboard nuevo con la skill `dataviz`).
+| # | Feature | Estado | Dónde |
+|---|---|---|---|
+| 1 | Búsqueda + autocompletado | ✅ **hecho** (en prod) | `js/storefront.js` (overlay) + `buscar.html` |
+| 2 | Feed Google/Meta | ✅ **hecho** (en prod) | `functions/feed.xml.js` + `image_url` en `_lib/catalog.js` |
+| 3 | SEO+ (OG/Twitter/canonical/breadcrumb) | ✅ **hecho** (en prod) | `functions/_middleware.js` (HTMLRewriter) |
+| 4 | **Cupones / códigos de descuento** | ⬜ **pendiente** | Contentful (defs) + D1 (usos atómicos) + `/api/checkout` |
+| 5 | **Email transaccional** (Resend) | ⬜ **pendiente** | confirmación/estado/tracking; luego campañas acotadas |
+| 6 | **Analítica** (CF Web Analytics + dashboard) | ⬜ **pendiente** | beacon en el engine + página nueva admin (KV+D1, skill `dataviz`) |
 
-> Todas se construyen en el **repo plantilla** (una vez, toda la flota). Lo por-cliente
-> son solo las llaves/cuentas de la tabla de dependencias.
+**Extras hechos este ciclo** (base de páginas): 6 legales de Chile + FAQ + `carrito.html`,
+footer con enlaces legales, rename `bq-v5.js`→`storefront.js`. Ver `ARCHITECTURE.md §19`.
+
+**Falta / próximos pasos generales:**
+- Rellenar placeholders legales `[…]` con datos reales + revisión legal.
+- Paginar el catálogo (`limit=100`) para soportar >100 productos.
+- **Extraer el repo plantilla** y neutralizar identificadores heredados (`bq-*`,
+  `SHOP_CONFIG`, `x-bq-cache`, `bq_cart_v5`) + wiring del token loader en runtime.
+- (Opcional CSS) `css/bq-v5.css` → `theme.css`, análogo al rename del JS.
+
+> Todas las features se construyen en el **repo plantilla** (una vez, toda la flota).
+> Lo por-cliente son solo las llaves/cuentas de la tabla de dependencias.

@@ -11,9 +11,19 @@ Checkout en página con stepper y **despacho multi-courier**: retiro en Punto Bl
 (Blue Express, tarifa de tabla) y despacho a domicilio cotizado en vivo con
 Chilexpress, elegibles por ambiente vía `SHIPPING_METHODS` (rama `feat/chilexpress-envio`).
 
-**Última actualización:** 31 julio 2026 (hora Chile, UTC−04).
+**Última actualización:** 1 agosto 2026 (hora Chile, UTC−04).
 
 > **Registro de cambios (para lectura por otras IA):**
+> - **2026-08-01** — **Features de comercio v1 + producto llave en mano.** (1) Motor
+>   `js/bq-v5.js` → **`js/storefront.js`** (nombre descriptivo). (2) **Búsqueda con
+>   autocompletado** (overlay en el nav + `buscar.html`), client-side sobre el
+>   catálogo ya cargado. (3) **Feed de productos** `functions/feed.xml.js` (RSS g:
+>   para Google Merchant / Meta); `getCatalog` ahora resuelve `image_url`+`description`.
+>   (4) **SEO+** `functions/_middleware.js` inyecta OG/Twitter/canonical/breadcrumb
+>   server-side en `/producto?id=` (los scrapers sociales no ejecutan JS). (5) **6
+>   páginas legales de Chile + FAQ + `carrito.html`**; footer del engine enlaza las
+>   legales. Ver §19. Docs de producto (estrategia llave en mano, tokens, runbook,
+>   features) en `docs/producto/`.
 > - **2026-07-31** — **Catálogo cacheado en el edge** (`functions/api/catalog.js`):
 >   el storefront leía Contentful directo en cada carga (`cache:'no-store'` en
 >   `js/api.js`) → 1 llamada CDA por visita, que escala 1:1 con el tráfico y presiona
@@ -931,3 +941,48 @@ público por diseño; ya nadie lo usa en el navegador — solo se mantiene el bl
 `BRAND` de ese archivo). El **primer techo** del plan Free pasa a ser la **banda de
 imágenes** (~0,55 MB por visita nueva → ~90K visitas únicas/mes); si algún día se
 supera, la siguiente palanca es proxyear/cachear las imágenes por Cloudflare.
+
+---
+
+## 19. Features de comercio (búsqueda, feed, SEO) y páginas base
+
+Features del boilerplate agregadas en la v1 (viven en el motor/Functions → van con
+la plantilla para toda la flota). El menú completo y el roadmap están en
+`docs/producto/FEATURES-V1.md`.
+
+- **Búsqueda con autocompletado** (`js/storefront.js`): el catálogo ya está en el
+  navegador (`PRODUCTS`), así que buscar es un filtro en memoria — instantáneo, sin
+  backend. Overlay inyectado por el engine (ícono 🔍 del nav) + página `buscar.html?q=`
+  con filtrado en vivo. Ranking simple (nombre > categoría > descripción), normaliza tildes.
+- **Feed de productos** (`functions/feed.xml.js` → `/feed.xml`): mismo patrón que
+  `sitemap.xml.js`; emite el catálogo en RSS 2.0 (namespace `g:`) para **Google
+  Merchant Center** y **Meta Commerce Manager**. Disponibilidad desde el stock D1 en
+  una consulta; cacheado 1 h. `getCatalog` (`_lib/catalog.js`) ahora resuelve
+  `image_url` (Assets de Contentful) y `description`, campos que el feed exige.
+- **SEO+** (`functions/_middleware.js`): la PDP se arma client-side, pero los
+  scrapers sociales (WhatsApp/FB/Twitter) **no ejecutan JS**. Este middleware inyecta
+  **server-side** Open Graph / Twitter Card / canonical / breadcrumb (JSON-LD) en el
+  `<head>` de `/producto(.html)?id=`, leyendo el catálogo cacheado, con **HTMLRewriter**.
+  **Defensivo:** solo toca esa ruta con `?id` y HTML; ante cualquier error devuelve la
+  respuesta intacta → no afecta `/api` ni el resto (verificado en producción).
+- **Páginas base y legales** (Chile): `carrito.html` (carrito de página completa que
+  reusa `renderCartPage()` del engine sobre el mismo `bq_cart_v5`), `buscar.html`,
+  `preguntas-frecuentes.html`, y las **6 legales** (`terminos`, `privacidad`,
+  `despacho`, `cambios-devoluciones`, `anulacion` —botón de arrepentimiento, Ley
+  21.398—, `cookies`), enlazadas desde el footer del engine. Son **plantillas** con
+  placeholders `[ENTRE CORCHETES]` a completar por cliente; **requieren revisión legal**.
+  El "pago rechazado" no es página aparte: lo maneja `gracias.html?status=rejected`.
+
+> **Pendiente / próximos pasos (roadmap v1, en `docs/producto/FEATURES-V1.md`):**
+> - **Cupones / códigos de descuento** — Contentful (definiciones) + D1 (límite de
+>   usos atómico), validados en `/api/checkout`. *(no implementado)*
+> - **Email transaccional** (Resend) — confirmación de compra / estado / tracking;
+>   luego campañas acotadas con opt-in. *(no implementado)*
+> - **Analítica** — Cloudflare Web Analytics + mini-dashboard nuevo en el admin
+>   (lee KV+D1). *(no implementado)*
+> - **Extracción del repo plantilla:** neutralizar identificadores heredados
+>   (`bq-v5.css`, `SHOP_CONFIG`/`BQ_CONFIG`, `x-bq-cache`, `bq_cart_v5`), wiring del
+>   token loader (runtime) en todas las páginas, y automatizar el aprovisionamiento
+>   (ver `docs/producto/RUNBOOK-APROVISIONAMIENTO.md`).
+> - **Rellenar placeholders legales** con los datos reales del comercio + revisión legal.
+> - Paginar el catálogo para soportar >100 productos (`limit=100` actual).
