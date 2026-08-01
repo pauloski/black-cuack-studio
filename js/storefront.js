@@ -325,6 +325,15 @@ function footerHTML(){
           <a href="contacto.html" data-hover>Página de contacto</a>
           <a href="mailto:conta@blackquack.cl" data-hover>conta@blackquack.cl</a>
         </nav>
+        <nav class="foot-nav">
+          <h4>Legal</h4>
+          <a href="terminos.html" data-hover>Términos y condiciones</a>
+          <a href="privacidad.html" data-hover>Privacidad</a>
+          <a href="despacho.html" data-hover>Despacho</a>
+          <a href="cambios-devoluciones.html" data-hover>Cambios y devoluciones</a>
+          <a href="anulacion.html" data-hover>Botón de arrepentimiento</a>
+          <a href="cookies.html" data-hover>Cookies</a>
+        </nav>
       </div>
       <div class="foot-bottom">
         <span>© 2026 BlackQuack — Ecosistema de animación independiente. Hecho con ruido en Chile 🇨🇱</span>
@@ -347,6 +356,7 @@ function cartHTML(){
       <div class="row" style="color:#666"><span>Envío</span><span>Se calcula al pagar</span></div>
       <div class="row total"><span>Total</span><span id="total">$0</span></div>
       <button class="btn lg" data-hover onclick="location.href='checkout.html'"><i data-lucide="credit-card"></i> Finalizar compra</button>
+      <a href="carrito.html" data-hover style="display:block;text-align:center;margin-top:10px;color:#666;font-size:.85rem">Ver carrito completo</a>
     </div>
   </aside>`;
 }
@@ -760,7 +770,7 @@ function addToCart(id, attrs){
   else cart[sku] = { id, key: variantKey(attrs), size:attrs.size||'', color:attrs.color||'', design:attrs.design||'', qty:1 };
   saveCart(); renderCart(); updateCount(true); return true;
 }
-function changeQtyBySku(sku,d){ if(!cart[sku])return; cart[sku].qty+=d; if(cart[sku].qty<=0)delete cart[sku]; saveCart(); renderCart(); updateCount(false); }
+function changeQtyBySku(sku,d){ if(!cart[sku])return; cart[sku].qty+=d; if(cart[sku].qty<=0)delete cart[sku]; saveCart(); renderCart(); renderCartPage(); updateCount(false); }
 function buyNow(id, attrs){ if(addToCart(id, attrs)) openCart(); }
 function renderCart(){
   const items=document.getElementById('cartItems'), foot=document.getElementById('cartFoot');
@@ -793,6 +803,47 @@ function renderCart(){
   document.getElementById('subtotal').textContent=CLP(sub);
   document.getElementById('total').textContent=CLP(sub);
   foot.style.display='block'; lucide.createIcons();
+}
+
+/* Carrito de PÁGINA COMPLETA (carrito.html). Reusa el mismo `cart` (localStorage),
+   findProduct y CLP que el drawer. Se pinta tras cargar productos (INIT) y en cada
+   cambio de cantidad. Si la página no tiene #cartPage, no hace nada. */
+function renderCartPage(){
+  const root=document.getElementById('cartPage'); if(!root) return;
+  const ids=Object.keys(cart);
+  if(!ids.length){
+    root.innerHTML=`<div class="cp-empty">
+      <i data-lucide="package-open"></i>
+      <p>Tu carrito está vacío.</p>
+      <a href="tienda.html" class="btn" data-hover><i data-lucide="store"></i> Ir a la tienda</a>
+    </div>`;
+    lucide.createIcons(); return;
+  }
+  let sub=0;
+  const rows=ids.map(sku=>{
+    const l=cart[sku]; const p=findProduct(l.id); if(!p){delete cart[sku];return'';}
+    const variant=p.variants.find(v=>v.key===l.key);
+    const unit=variant?variant.price:p.price;
+    sub+=unit*l.qty;
+    const label=[l.size,l.color,l.design].filter(Boolean).join(' · ');
+    return `<div class="cp-row">
+      <img class="cp-thumb" src="${p.images[0]}" alt="${p.name}">
+      <div class="cp-info"><h3>${p.name}</h3>${label?`<div class="cp-var">${label}</div>`:''}<div class="cp-unit">${CLP(unit)}</div></div>
+      <div class="cp-qty"><button data-hover onclick="changeQtyBySku('${sku}',-1)">−</button><span>${l.qty}</span><button data-hover onclick="changeQtyBySku('${sku}',1)">+</button></div>
+      <div class="cp-line">${CLP(unit*l.qty)}</div>
+      <button class="cp-rm" data-hover onclick="changeQtyBySku('${sku}',-99)" aria-label="Quitar"><i data-lucide="trash-2"></i></button>
+    </div>`;
+  }).join('');
+  root.innerHTML=`<div class="cp-list">${rows}</div>
+    <aside class="cp-summary">
+      <h3>Resumen</h3>
+      <div class="cp-sr"><span>Subtotal</span><span>${CLP(sub)}</span></div>
+      <div class="cp-sr" style="color:#777"><span>Envío</span><span>Se calcula al pagar</span></div>
+      <div class="cp-sr cp-total"><span>Total</span><span>${CLP(sub)}</span></div>
+      <button class="btn lg" data-hover style="width:100%" onclick="location.href='checkout.html'"><i data-lucide="credit-card"></i> Finalizar compra</button>
+      <a href="tienda.html" class="cp-cont" data-hover>← Seguir comprando</a>
+    </aside>`;
+  lucide.createIcons();
 }
 function checkout(){ closeCartFn(); cart={}; saveCart(); renderCart(); updateCount(false); fireConfetti(); alert('¡Gracias por tu compra! 🦆 Tu pedido BlackQuack está en camino. (Checkout simulado)'); }
 
@@ -852,6 +903,7 @@ loadProducts().then(()=>{
   renderHeroCarousel();
   renderPDP();
   renderCart();
+  renderCartPage();
   updateCount(false);
   revealInit();
 });

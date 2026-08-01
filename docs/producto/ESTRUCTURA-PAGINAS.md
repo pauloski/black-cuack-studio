@@ -36,7 +36,7 @@ Home ─► PLP (categoría/listado) ─► PDP (ficha) ─► Carrito ─► Ch
 | **Carrito** | `carrito.html` | Resumen editable (además del drawer rápido) |
 | **Checkout** | `checkout.html` | Stepper: datos → despacho → pago |
 | **Gracias** | `gracias.html` | Confirmación de compra + resumen de orden |
-| **Pago rechazado** | `pago-rechazado.html` | Estado de pago fallido/anulado + reintento |
+| **Pago rechazado** | `gracias.html?status=rejected` | Mismo estado de pedido que Gracias (una sola página maneja OK/rechazado) |
 | **Seguimiento** | `seguimiento.html` | Estado y tracking de la orden por código |
 | **Búsqueda** | `buscar.html` (`?q=`) | Resultados de búsqueda *(opcional pero recomendado)* |
 
@@ -97,9 +97,16 @@ Home ─► PLP (categoría/listado) ─► PDP (ficha) ─► Carrito ─► Ch
 
 ## Estado vs. plantilla base
 
-- **Ya existen** (implementación de referencia): home, PLP, PDP, checkout, gracias,
-  seguimiento, contacto, nosotros, 404, admin, app de stock.
-- **A agregar para la base sólida:** `carrito.html`, `pago-rechazado.html`,
-  `buscar.html` (opcional), `preguntas-frecuentes.html`, y las **6 legales** del §3
-  (`terminos`, `privacidad`, `despacho`, `cambios-devoluciones`, `anulacion`,
-  `cookies`). Estas legales son plantillas de texto que se rellenan por cliente.
+- **Ya existen** (implementación de referencia): home, PLP, PDP, checkout, gracias
+  (maneja también el pago rechazado vía `?status=rejected`), seguimiento, contacto,
+  nosotros, 404, admin, app de stock, design system (`ds.html`).
+- **Creadas como plantilla:** las **6 legales** (`terminos`, `privacidad`,
+  `despacho`, `cambios-devoluciones`, `anulacion`, `cookies`) +
+  `preguntas-frecuentes.html`. Tienen placeholders `[ENTRE CORCHETES]` a completar
+  por cliente y **requieren revisión legal** (no son asesoría legal). `anulacion.html`
+  incluye un formulario funcional (email/WhatsApp) — el **botón de arrepentimiento**
+  exigido por la Ley 21.398.
+- **Pendiente:** `carrito.html` (página completa de carrito — funcional, integra
+  `bq_cart_v5` + catálogo) y `buscar.html` (opcional).
+- **Falta cablear:** enlazar las 6 legales en el **footer compartido** (en el JS del
+  engine) para que sean visibles en todas las páginas.

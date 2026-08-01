@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tu Carrito</title>
+<meta name="description" content="Revisa los productos de tu carrito antes de pagar.">
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Archivo+Black&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<link rel="stylesheet" href="css/bq-v5.css">
+<!-- Carrito de página completa. La grilla la pinta renderCartPage() del engine
+     (js/storefront.js), reusando el mismo carrito (localStorage) que el drawer. -->
+<style>
+  #cartPage{display:grid;grid-template-columns:1fr 320px;gap:30px;align-items:start}
+  @media(max-width:820px){#cartPage{grid-template-columns:1fr}}
+  .cp-empty{grid-column:1/-1;text-align:center;padding:60px 0;color:#777}
+  .cp-empty i{width:48px;height:48px;color:#ccc}
+  .cp-empty p{margin:14px 0 20px}
+  .cp-list{display:flex;flex-direction:column;gap:14px}
+  .cp-row{display:grid;grid-template-columns:84px 1fr auto auto auto;gap:16px;align-items:center;
+    background:#fff;border:1px solid var(--border-soft);border-radius:var(--border-radius);padding:14px;box-shadow:var(--shadow-soft)}
+  .cp-thumb{width:84px;height:84px;object-fit:cover;border-radius:10px;background:var(--surface-soft)}
+  .cp-info h3{font-family:var(--font-title);font-size:1rem;margin-bottom:2px}
+  .cp-var{font-size:.8rem;color:#888;margin-bottom:4px}
+  .cp-unit{font-family:var(--font-mono);font-size:.82rem;color:#666}
+  .cp-qty{display:flex;align-items:center;gap:6px;border:1.5px solid var(--border-soft);border-radius:10px;padding:4px}
+  .cp-qty button{width:28px;height:28px;border:none;background:var(--surface-soft);border-radius:7px;font-size:1.1rem;cursor:pointer;line-height:1}
+  .cp-qty span{min-width:26px;text-align:center;font-weight:700}
+  .cp-line{font-family:var(--font-display);font-size:1.05rem;min-width:90px;text-align:right}
+  .cp-rm{border:none;background:none;color:#c0392b;cursor:pointer;padding:6px}
+  .cp-rm i{width:18px;height:18px}
+  @media(max-width:560px){
+    .cp-row{grid-template-columns:64px 1fr auto;grid-template-areas:'img info rm' 'img qty line'}
+    .cp-thumb{grid-area:img;width:64px;height:64px}.cp-info{grid-area:info}
+    .cp-qty{grid-area:qty}.cp-line{grid-area:line;text-align:right}.cp-rm{grid-area:rm;justify-self:end}
+  }
+  .cp-summary{background:#fff;border:1px solid var(--border-soft);border-radius:var(--border-radius);
+    padding:22px;box-shadow:var(--shadow-soft);position:sticky;top:100px}
+  .cp-summary h3{font-family:var(--font-title);margin-bottom:14px}
+  .cp-sr{display:flex;justify-content:space-between;padding:8px 0;font-size:.92rem}
+  .cp-total{border-top:1.5px solid var(--surface-soft);margin-top:6px;padding-top:12px;font-family:var(--font-display);font-size:1.15rem}
+  .cp-summary .btn.lg{margin-top:16px}
+  .cp-cont{display:block;text-align:center;margin-top:14px;color:#666;font-size:.88rem}
+</style>
+</head>
+<body data-page="carrito">
+
+<section class="page-hero dark">
+  <div class="wrap">
+    <span class="eyebrow" style="background:var(--color-brand)"><i data-lucide="shopping-bag" style="width:14px"></i> Carrito</span>
+    <h1>Tu Carrito</h1>
+    <p class="lead">Revisa tus productos antes de finalizar la compra.</p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="wrap">
+    <div id="cartPage"><!-- renderCartPage() lo llena --></div>
+  </div>
+</section>
+
+<script src="js/storefront.js"></script>
+<script src="/js/whatsapp.js" defer></script>
+</body>
+</html>

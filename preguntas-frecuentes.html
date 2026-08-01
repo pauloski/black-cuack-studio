@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Preguntas Frecuentes</title>
+<meta name="description" content="Respuestas sobre compras, pagos, despacho y devoluciones.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Archivo+Black&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<link rel="stylesheet" href="css/bq-v5.css">
+<!-- PLANTILLA. Ajustar respuestas [ENTRE CORCHETES] según la operación real. -->
+<style>
+  .faq{max-width:820px;margin:0 auto}
+  .faq h2{margin:34px 0 10px}
+  .faq details{border:1px solid var(--border-soft);border-radius:12px;padding:2px 18px;margin-bottom:10px;background:#fff}
+  .faq summary{cursor:pointer;font-family:var(--font-title);font-weight:600;padding:14px 0;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .faq summary::-webkit-details-marker{display:none}
+  .faq summary::after{content:'+';font-size:1.3rem;color:var(--color-brand);font-weight:700}
+  .faq details[open] summary::after{content:'−'}
+  .faq details p{padding:0 0 16px;color:#555}
+</style>
+</head>
+<body data-page="faq">
+
+<section class="page-hero dark">
+  <div class="wrap">
+    <span class="eyebrow" style="background:var(--color-brand)"><i data-lucide="help-circle" style="width:14px"></i> Ayuda</span>
+    <h1>Preguntas Frecuentes</h1>
+    <p class="lead">Todo lo que necesitas saber antes y después de comprar.</p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="wrap"><div class="faq">
+
+    <h2>Compras y pagos</h2>
+    <details><summary>¿Qué medios de pago aceptan?</summary><p>Pagos con tarjeta a través de la pasarela <strong>[PASARELA]</strong> (Webpay u otros). No almacenamos datos de tu tarjeta.</p></details>
+    <details><summary>¿Es seguro comprar aquí?</summary><p>Sí. El pago se procesa de forma segura por el proveedor de pagos y el sitio corre sobre infraestructura de nivel empresarial.</p></details>
+    <details><summary>¿Recibo comprobante de mi compra?</summary><p>Sí, recibes una confirmación con el número de tu pedido. La boleta/factura se emite según <strong>[POLÍTICA DE DOCUMENTOS]</strong>.</p></details>
+
+    <h2>Despacho</h2>
+    <details><summary>¿A dónde despachan y cuánto demora?</summary><p>Despachamos a <strong>[COBERTURA]</strong>. Los plazos y costos se detallan en la <a href="despacho.html">Política de Despacho</a> y se calculan en el checkout.</p></details>
+    <details><summary>¿Puedo hacer seguimiento de mi pedido?</summary><p>Sí, con tu número de pedido en <a href="seguimiento.html">Seguimiento</a>.</p></details>
+    <details><summary>¿Puedo retirar en un punto?</summary><p>Donde esté disponible, ofrecemos retiro en punto (suele ser la opción más económica). Lo eliges en el checkout.</p></details>
+
+    <h2>Cambios y devoluciones</h2>
+    <details><summary>¿Puedo arrepentirme de mi compra?</summary><p>Sí. Tienes 10 días de derecho a retracto; puedes usar el <a href="anulacion.html">botón de arrepentimiento</a>. Ver <a href="cambios-devoluciones.html">Cambios y Devoluciones</a>.</p></details>
+    <details><summary>Mi producto llegó con falla, ¿qué hago?</summary><p>Aplica la garantía legal: reparación, cambio o devolución del dinero. Escríbenos a <strong>[EMAIL]</strong> con tu número de pedido.</p></details>
+    <details><summary>¿Cuánto demora el reembolso?</summary><p>Se realiza por el mismo medio de pago dentro de <strong>[N]</strong> días hábiles desde su aprobación.</p></details>
+
+    <h2>Productos</h2>
+    <details><summary>¿Los colores/imágenes son exactos?</summary><p>Las imágenes son referenciales; puede haber variaciones menores de color según tu pantalla.</p></details>
+    <details><summary>¿Tienen más stock de un producto agotado?</summary><p>Escríbenos por <strong>[WHATSAPP]</strong> y te avisamos cuando vuelva.</p></details>
+
+    <p style="text-align:center;margin-top:30px"><a href="contacto.html" class="btn" data-hover><i data-lucide="mail"></i> ¿Otra duda? Escríbenos</a></p>
+
+  </div></div>
+</section>
+
+<script src="js/storefront.js"></script>
+<script src="/js/whatsapp.js" defer></script>
+</body>
+</html>
