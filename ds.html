@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Design System — style guide vivo</title>
+<meta name="robots" content="noindex, nofollow">
+<!-- DESIGN SYSTEM (style guide vivo). Demuestra el enfoque LIVIANO de marca:
+     todos los valores vienen de brand.tokens.json, aplicados EN RUNTIME por el
+     script del final (cero build, cero npm, cero compilador). Edita el JSON,
+     recarga, y todo cambia. Los valores en :root son solo defaults/fallback. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Plus+Jakarta+Sans:wght@400;600;800&family=Archivo+Black&family=Space+Mono&display=swap" rel="stylesheet">
+<style>
+  /* Defaults/fallback — el token del navegador los sobreescribe (sin FOUC). */
+  :root{
+    --color-brand:#F39200; --color-accent:#DEC520; --color-dark:#444444;
+    --bg-primary:#FFFFFF; --surface-soft:#F1F1F1; --color-error:#C0392B;
+    --font-title:'Space Grotesk',sans-serif; --font-body:'Plus Jakarta Sans',sans-serif;
+    --font-display:'Archivo Black',sans-serif; --font-mono:'Space Mono',monospace;
+    --border-radius:14px; --maxw:1280px;
+    --border-soft:#e6e6e6; --shadow-soft:0 2px 10px rgba(20,20,20,.06);
+    --shadow-heavy:0 8px 26px rgba(20,20,20,.10);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:var(--font-body);color:var(--color-dark);background:var(--bg-primary);line-height:1.55;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:960px;margin:0 auto;padding:40px 20px 80px}
+  header.ds{border-bottom:2px solid var(--surface-soft);padding-bottom:24px;margin-bottom:8px}
+  .kicker{font-family:var(--font-mono);font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:var(--color-brand)}
+  h1.brand{font-family:var(--font-display);font-size:clamp(2rem,6vw,3.4rem);line-height:1;margin:6px 0}
+  .tagline{color:#777;font-size:1.05rem}
+  .src{font-family:var(--font-mono);font-size:.75rem;color:#999;margin-top:10px}
+  .src code{background:var(--surface-soft);padding:2px 7px;border-radius:6px}
+  section{margin-top:44px}
+  h2{font-family:var(--font-title);text-transform:uppercase;font-size:1.05rem;letter-spacing:.04em;margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid var(--surface-soft)}
+  /* colores */
+  .swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px}
+  .sw{border:1px solid var(--border-soft);border-radius:var(--border-radius);overflow:hidden}
+  .sw .chip{height:74px}
+  .sw .meta{padding:9px 11px;font-size:.8rem}
+  .sw .meta b{display:block;font-family:var(--font-title)}
+  .sw .meta span{font-family:var(--font-mono);color:#888;font-size:.75rem}
+  /* tipografía */
+  .type-row{display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;padding:10px 0;border-bottom:1px dashed var(--surface-soft)}
+  .type-row .lbl{font-family:var(--font-mono);font-size:.72rem;color:#999;width:150px;flex-shrink:0}
+  /* componentes */
+  .row{display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+  .btn{font-family:var(--font-title);font-weight:700;border:none;border-radius:var(--border-radius);padding:12px 22px;font-size:.92rem;cursor:pointer}
+  .btn.primary{background:var(--color-brand);color:#fff;box-shadow:0 10px 28px color-mix(in srgb,var(--color-brand) 32%,transparent)}
+  .btn.dark{background:var(--color-dark);color:#fff}
+  .btn.ghost{background:transparent;border:1.5px solid var(--border-soft);color:var(--color-dark)}
+  .btn.accent{background:var(--color-accent);color:var(--color-dark)}
+  .field{display:flex;flex-direction:column;gap:6px;max-width:320px}
+  .field label{font-family:var(--font-title);font-weight:600;font-size:.8rem}
+  .field input{border:1.5px solid var(--border-soft);border-radius:10px;padding:12px 13px;font-family:var(--font-body)}
+  .field input:focus{outline:none;border-color:var(--color-brand);box-shadow:0 0 0 3px color-mix(in srgb,var(--color-brand) 18%,transparent)}
+  .badge{display:inline-block;font-family:var(--font-title);font-weight:700;font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;padding:4px 10px;border-radius:999px}
+  .badge.brand{background:var(--color-brand);color:#fff}
+  .badge.soft{background:var(--surface-soft);color:var(--color-dark)}
+  .badge.err{background:var(--color-error);color:#fff}
+  .card{background:#fff;border:1px solid var(--border-soft);border-radius:var(--border-radius);box-shadow:var(--shadow-soft);padding:20px;max-width:300px}
+  .card h3{font-family:var(--font-title);margin-bottom:6px}
+  /* product card */
+  .pcard{width:240px;border:1px solid var(--border-soft);border-radius:var(--border-radius);overflow:hidden;box-shadow:var(--shadow-soft)}
+  .pcard .ph{height:150px;background:var(--surface-soft);display:grid;place-items:center;color:#bbb;font-family:var(--font-mono);font-size:.8rem}
+  .pcard .body{padding:14px}
+  .pcard .title{font-family:var(--font-title);font-weight:600;font-size:.95rem}
+  .pcard .price{font-family:var(--font-display);font-size:1.3rem;margin:4px 0 12px;color:var(--color-dark)}
+  .pcard .buy{width:100%;background:var(--color-brand);color:#fff;border:none;border-radius:10px;padding:10px;font-family:var(--font-title);font-weight:700;cursor:pointer}
+  /* tabla de tokens en vivo */
+  table{width:100%;border-collapse:collapse;font-size:.85rem;margin-top:8px}
+  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--surface-soft)}
+  th{font-family:var(--font-title);text-transform:uppercase;font-size:.68rem;letter-spacing:.06em;color:#999}
+  td.k,td.v{font-family:var(--font-mono);font-size:.78rem}
+  td .dot{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:middle;margin-right:7px;border:1px solid rgba(0,0,0,.1)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="ds">
+    <div class="kicker">Design System · style guide vivo</div>
+    <h1 class="brand" data-brand-name>Marca Demo</h1>
+    <div class="tagline" data-brand-tagline>Tu eslogan aquí</div>
+    <div class="src">Todo en esta página viene de <code>brand.tokens.json</code>, aplicado en runtime. Edita el JSON y recarga → todo cambia. Sin build, sin npm.</div>
+  </header>
+
+  <section>
+    <h2>Colores</h2>
+    <div class="swatches">
+      <div class="sw"><div class="chip" style="background:var(--color-brand)"></div><div class="meta"><b>Brand</b><span data-hex="brand">#F39200</span></div></div>
+      <div class="sw"><div class="chip" style="background:var(--color-accent)"></div><div class="meta"><b>Accent</b><span data-hex="accent">#DEC520</span></div></div>
+      <div class="sw"><div class="chip" style="background:var(--color-dark)"></div><div class="meta"><b>Dark</b><span data-hex="dark">#444444</span></div></div>
+      <div class="sw"><div class="chip" style="background:var(--surface-soft)"></div><div class="meta"><b>Surface</b><span data-hex="surfaceSoft">#F1F1F1</span></div></div>
+      <div class="sw"><div class="chip" style="background:var(--color-error)"></div><div class="meta"><b>Error</b><span data-hex="error">#C0392B</span></div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Tipografía</h2>
+    <div class="type-row"><span class="lbl">display</span><span style="font-family:var(--font-display);font-size:2rem">Aa Título Hero</span></div>
+    <div class="type-row"><span class="lbl">title</span><span style="font-family:var(--font-title);font-weight:700;font-size:1.4rem">Aa Encabezado</span></div>
+    <div class="type-row"><span class="lbl">body</span><span style="font-family:var(--font-body);font-size:1rem">Aa Texto de párrafo para leer cómodo.</span></div>
+    <div class="type-row"><span class="lbl">mono</span><span style="font-family:var(--font-mono);font-size:.9rem">Aa 0123 · código / precio</span></div>
+  </section>
+
+  <section>
+    <h2>Botones</h2>
+    <div class="row">
+      <button class="btn primary">Comprar ahora</button>
+      <button class="btn dark">Secundario</button>
+      <button class="btn accent">Acento</button>
+      <button class="btn ghost">Ghost</button>
+    </div>
+  </section>
+
+  <section>
+    <h2>Formulario · Badges</h2>
+    <div class="row" style="align-items:flex-start;gap:40px">
+      <div class="field"><label>Correo</label><input placeholder="tu@correo.cl"></div>
+      <div class="row">
+        <span class="badge brand">Nuevo</span>
+        <span class="badge soft">Agotado</span>
+        <span class="badge err">-20%</span>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Tarjetas</h2>
+    <div class="row" style="align-items:flex-start">
+      <div class="card"><h3>Tarjeta base</h3><p>Contenido genérico con sombra suave y radio del token.</p></div>
+      <div class="pcard">
+        <div class="ph">imagen producto</div>
+        <div class="body">
+          <div class="title">Producto de ejemplo</div>
+          <div class="price">$19.990</div>
+          <button class="buy">Agregar al carrito</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Tokens en vivo (desde brand.tokens.json)</h2>
+    <table id="tok"><thead><tr><th>Token</th><th>Variable CSS</th><th>Valor</th></tr></thead><tbody></tbody></table>
+  </section>
+</div>
+
+<script>
+/* Cargador de tokens EN RUNTIME. Cero build, cero dependencias. Mapea
+   brand.tokens.json → variables CSS de :root y rellena los textos de marca.
+   Éste es TODO el "convertidor": ~40 líneas de JS vanilla. */
+(function () {
+  // token.json (ruta) → variable CSS
+  var MAP = {
+    'colors.brand': '--color-brand', 'colors.accent': '--color-accent',
+    'colors.dark': '--color-dark', 'colors.bg': '--bg-primary',
+    'colors.surfaceSoft': '--surface-soft', 'colors.error': '--color-error',
+    'fonts.title': '--font-title', 'fonts.body': '--font-body',
+    'fonts.display': '--font-display', 'fonts.mono': '--font-mono',
+    'layout.radius': '--border-radius', 'layout.maxWidth': '--maxw'
+  };
+  var FONT_FALLBACK = { title: 'sans-serif', body: 'sans-serif', display: 'sans-serif', mono: 'monospace' };
+  function get(obj, path) { return path.split('.').reduce(function (o, k) { return o && o[k]; }, obj); }
+
+  fetch('brand.tokens.json').then(function (r) { return r.json(); }).then(function (t) {
+    var root = document.documentElement.style;
+    Object.keys(MAP).forEach(function (path) {
+      var val = get(t, path);
+      if (val == null) return;
+      // Las fuentes se envuelven con su fallback.
+      if (path.indexOf('fonts.') === 0) {
+        var kind = path.split('.')[1];
+        val = "'" + val + "'," + (FONT_FALLBACK[kind] || 'sans-serif');
+      }
+      root.setProperty(MAP[path], val);
+    });
+    // Textos de marca
+    document.querySelectorAll('[data-brand-name]').forEach(function (e) { e.textContent = t.brand.name; });
+    document.querySelectorAll('[data-brand-tagline]').forEach(function (e) { e.textContent = t.brand.tagline; });
+    document.querySelectorAll('[data-hex]').forEach(function (e) { e.textContent = t.colors[e.dataset.hex]; });
+    document.title = 'Design System — ' + t.brand.name;
+    // Tabla de tokens en vivo
+    var tb = document.querySelector('#tok tbody');
+    Object.keys(MAP).forEach(function (path) {
+      var val = get(t, path); if (val == null) return;
+      var isColor = path.indexOf('colors.') === 0;
+      var tr = document.createElement('tr');
+      tr.innerHTML = '<td class="k">' + path + '</td><td class="k">' + MAP[path] + '</td>' +
+        '<td class="v">' + (isColor ? '<span class="dot" style="background:' + val + '"></span>' : '') + val + '</td>';
+      tb.appendChild(tr);
+    });
+  }).catch(function (e) {
+    console.warn('[ds] no se pudo leer brand.tokens.json (se usan defaults):', e.message);
+  });
+})();
+</script>
+</body>
+</html>

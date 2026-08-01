@@ -1,0 +1,29 @@
+{
+  "brand": {
+    "name": "Marca Demo",
+    "tagline": "Tu eslogan aquí",
+    "email": "hola@dominio.cl",
+    "domain": "dominio.cl",
+    "orderPrefix": "XX-",
+    "logo": "media/logo.svg",
+    "socials": { "instagram": "", "tiktok": "", "facebook": "" }
+  },
+  "colors": {
+    "brand": "#F39200",
+    "accent": "#DEC520",
+    "dark": "#444444",
+    "bg": "#FFFFFF",
+    "surfaceSoft": "#F1F1F1",
+    "error": "#C0392B"
+  },
+  "fonts": {
+    "title": "Space Grotesk",
+    "body": "Plus Jakarta Sans",
+    "display": "Archivo Black",
+    "mono": "Space Mono"
+  },
+  "layout": {
+    "radius": "14px",
+    "maxWidth": "1280px"
+  }
+}
