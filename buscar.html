@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Buscar</title>
+<meta name="description" content="Busca productos en la tienda.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Archivo+Black&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<link rel="stylesheet" href="css/bq-v5.css">
+<style>
+  .search-hero-bar{display:flex;align-items:center;gap:12px;max-width:640px;margin:18px 0 0;
+    background:#fff;border-radius:14px;padding:14px 18px;box-shadow:0 8px 26px rgba(20,20,20,.12)}
+  .search-hero-bar i{width:22px;height:22px;color:#888}
+  .search-hero-bar input{flex:1;border:none;outline:none;font-size:1.1rem;font-family:var(--font-body,sans-serif);color:var(--color-dark)}
+  #searchPageHead{color:#777;margin-bottom:18px}
+</style>
+</head>
+<body data-page="buscar">
+
+<section class="page-hero dark">
+  <div class="wrap">
+    <span class="eyebrow" style="background:var(--color-brand)"><i data-lucide="search" style="width:14px"></i> Buscar</span>
+    <h1>¿Qué estás buscando?</h1>
+    <div class="search-hero-bar">
+      <i data-lucide="search"></i>
+      <input id="searchPageInput" type="search" placeholder="Escribe un producto…" autocomplete="off" autofocus>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="wrap">
+    <p id="searchPageHead">Escribe algo para buscar tus productos.</p>
+    <div id="searchPage" class="store-grid"><!-- renderSearchPage() lo llena --></div>
+  </div>
+</section>
+
+<script src="js/storefront.js"></script>
+<script src="/js/whatsapp.js" defer></script>
+</body>
+</html>

@@ -281,6 +281,7 @@ function headerHTML(){
       <a href="index.html" class="brand-logo" data-hover><img class="wordmark" src="images/logo2.png" alt="BlackQuack"></a>
       <div class="nav-menu" id="navMenu">${links}</div>
       <div class="nav-actions">
+        <button class="cart-btn" id="searchBtn" data-hover aria-label="Buscar"><i data-lucide="search"></i></button>
         <button class="cart-btn" id="cartBtn" data-hover aria-label="Carrito">
           <i data-lucide="shopping-bag"></i>
           <span class="cart-count" id="cartCount" style="display:none">0</span>
@@ -361,6 +362,36 @@ function cartHTML(){
   </aside>`;
 }
 
+function searchHTML(){
+  return `<style>
+  .search-overlay{position:fixed;inset:0;z-index:1200;background:rgba(20,20,20,.5);opacity:0;pointer-events:none;transition:opacity .2s;display:flex;justify-content:center;align-items:flex-start}
+  .search-overlay.open{opacity:1;pointer-events:auto}
+  .search-panel{background:#fff;width:min(680px,94vw);margin-top:8vh;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.25);overflow:hidden;transform:translateY(-12px);transition:transform .2s}
+  .search-overlay.open .search-panel{transform:none}
+  .search-bar{display:flex;align-items:center;gap:12px;padding:15px 18px;border-bottom:1px solid var(--border-soft,#e6e6e6)}
+  .search-bar i{width:20px;height:20px;color:#888}
+  .search-bar input{flex:1;border:none;outline:none;font-size:1.05rem;font-family:var(--font-body,sans-serif);background:none}
+  .search-results{max-height:60vh;overflow-y:auto;padding:8px}
+  .sr-item{display:flex;align-items:center;gap:12px;padding:10px;border-radius:10px;text-decoration:none;color:inherit}
+  .sr-item:hover{background:var(--surface-soft,#f1f1f1)}
+  .sr-item img{width:52px;height:52px;object-fit:cover;border-radius:8px;background:var(--surface-soft,#f1f1f1)}
+  .sr-item .sr-name{font-family:var(--font-title,sans-serif);font-weight:600;font-size:.95rem}
+  .sr-item .sr-cat{font-size:.78rem;color:#888}
+  .sr-item .sr-price{margin-left:auto;font-family:var(--font-display,sans-serif);font-size:.95rem;white-space:nowrap}
+  .sr-empty{padding:26px;text-align:center;color:#999}
+  .sr-all{display:block;text-align:center;padding:13px;color:var(--color-brand,#F39200);font-weight:700;text-decoration:none;border-top:1px solid var(--border-soft,#e6e6e6)}
+  </style>
+  <div class="search-overlay" id="searchOverlay">
+    <div class="search-panel">
+      <div class="search-bar">
+        <i data-lucide="search"></i>
+        <input id="searchInput" type="search" placeholder="Buscar productos…" autocomplete="off" aria-label="Buscar">
+        <button class="icon-x" id="closeSearch" data-hover aria-label="Cerrar"><i data-lucide="x"></i></button>
+      </div>
+      <div class="search-results" id="searchResults"><div class="sr-empty">Escribe para buscar productos.</div></div>
+    </div>
+  </div>`;
+}
 function workshopModalHTML(){
   return `<div class="modal" id="workshopModal">
     <div class="modal-bg" onclick="closeModal('workshopModal')"></div>
@@ -399,7 +430,7 @@ const preHTML = document.body.hasAttribute('data-preloader')
 document.body.insertAdjacentHTML('afterbegin',
   `<div class="cursor-dot" id="curDot"></div><div class="cursor-ring" id="curRing"></div>` + preHTML + headerHTML());
 document.body.insertAdjacentHTML('beforeend',
-  footerHTML() + cartHTML() + workshopModalHTML() + `<div class="confetti-layer" id="confettiLayer"></div>`);
+  footerHTML() + cartHTML() + searchHTML() + workshopModalHTML() + `<div class="confetti-layer" id="confettiLayer"></div>`);
 lucide.createIcons();
 
 /* ---------- PRELOADER ---------- */
@@ -847,6 +878,69 @@ function renderCartPage(){
 }
 function checkout(){ closeCartFn(); cart={}; saveCart(); renderCart(); updateCount(false); fireConfetti(); alert('¡Gracias por tu compra! 🦆 Tu pedido BlackQuack está en camino. (Checkout simulado)'); }
 
+/* ---------- SEARCH (client-side, autocompletado) ----------
+   El catálogo ya está en el navegador (PRODUCTS), así que buscar es un filtro en
+   memoria: instantáneo, sin backend. Alimenta el overlay del nav y buscar.html. */
+const normS = s => String(s==null?'':s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+function searchProducts(q){
+  q = normS(q).trim(); if(!q) return [];
+  const terms = q.split(/\s+/);
+  return PRODUCTS.map(p=>{
+    const name=normS(p.name), cat=normS(p.cat), desc=normS(p.desc);
+    let score=0;
+    terms.forEach(t=>{ if(name.includes(t))score+=3; if(cat.includes(t))score+=2; if(desc.includes(t))score+=1; });
+    return {p,score};
+  }).filter(x=>x.score>0).sort((a,b)=>b.score-a.score).map(x=>x.p);
+}
+function srItem(p){
+  return `<a class="sr-item" href="${productHref(p.id)}">
+    <img src="${p.images[0]}" alt="${p.name}" loading="lazy">
+    <div><div class="sr-name">${p.name}</div><div class="sr-cat">${p.cat}</div></div>
+    <span class="sr-price">${CLP(p.price)}</span>
+  </a>`;
+}
+/* Página de resultados completa (buscar.html?q=), con filtrado en vivo al tipear. */
+function renderSearchPage(){
+  const root=document.getElementById('searchPage'); if(!root) return;
+  const head=document.getElementById('searchPageHead');
+  const input=document.getElementById('searchPageInput');
+  const q0=new URLSearchParams(location.search).get('q')||'';
+  if(input && !input.value) input.value=q0;
+  function paint(q){
+    q=(q||'').trim();
+    if(!q){ root.innerHTML=''; if(head) head.textContent='Escribe algo para buscar tus productos.'; return; }
+    const hits=searchProducts(q);
+    if(head) head.textContent = hits.length ? `${hits.length} resultado(s) para “${q}”` : `Sin resultados para “${q}”`;
+    root.innerHTML=hits.map(productCard).join('');
+    lucide.createIcons();
+  }
+  if(input) input.addEventListener('input',()=>paint(input.value));
+  paint(q0);
+}
+/* Overlay de autocompletado del nav (se inyecta con el chrome). */
+(function(){
+  const overlay=document.getElementById('searchOverlay'); if(!overlay) return;
+  const input=document.getElementById('searchInput');
+  const results=document.getElementById('searchResults');
+  const openS=()=>{overlay.classList.add('open');setTimeout(()=>input.focus(),60);};
+  const closeS=()=>overlay.classList.remove('open');
+  const btn=document.getElementById('searchBtn'); if(btn) btn.addEventListener('click',openS);
+  const x=document.getElementById('closeSearch'); if(x) x.addEventListener('click',closeS);
+  overlay.addEventListener('click',e=>{ if(e.target===overlay) closeS(); });
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeS(); });
+  function render(){
+    const q=input.value.trim();
+    if(!q){ results.innerHTML='<div class="sr-empty">Escribe para buscar productos.</div>'; return; }
+    const hits=searchProducts(q);
+    if(!hits.length){ results.innerHTML='<div class="sr-empty">Sin resultados.</div>'; return; }
+    results.innerHTML=hits.slice(0,6).map(srItem).join('') +
+      `<a class="sr-all" href="buscar.html?q=${encodeURIComponent(q)}">Ver los ${hits.length} resultados →</a>`;
+    lucide.createIcons();
+  }
+  input.addEventListener('input',render);
+  input.addEventListener('keydown',e=>{ if(e.key==='Enter'){ const q=input.value.trim(); if(q) location.href='buscar.html?q='+encodeURIComponent(q); }});
+})();
+
 /* ---------- MODALS ---------- */
 function openModal(id){document.getElementById(id).classList.add('show');document.body.style.overflow='hidden';lucide.createIcons();}
 function closeModal(id){document.getElementById(id).classList.remove('show');document.body.style.overflow='';}
@@ -904,6 +998,7 @@ loadProducts().then(()=>{
   renderPDP();
   renderCart();
   renderCartPage();
+  renderSearchPage();
   updateCount(false);
   revealInit();
 });
