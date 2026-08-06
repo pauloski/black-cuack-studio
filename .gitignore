@@ -16,3 +16,7 @@ node_modules/
 
 # imágenes fuente pesadas y sin uso (el sitio usa el CDN de Contentful)
 images/product/
+
+.dev.vars*
+!.dev.vars.example
+!.env.example
