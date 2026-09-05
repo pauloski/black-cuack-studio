@@ -265,6 +265,15 @@ async function loadProducts(){
 
 /* ---------- SHARED CHROME (nav / footer / cart / modal) ---------- */
 const PAGE = document.body.dataset.page || '';
+
+/* Interruptor de tienda (ver js/config.js). En false se oculta todo lo
+   comercial: link Tienda, carrito/búsqueda, tienda.html, banners y carruseles.
+   Por defecto true si el flag no existe (fork sin config). */
+const STORE_ENABLED = !(window.BQ_CONFIG && window.BQ_CONFIG.STORE_ENABLED === false);
+
+/* Ítems ocultos del menú (nav + footer) sin borrar sus páginas: siguen
+   accesibles por link directo (p.ej. el banner de Talleres en el home). */
+const HIDDEN_NAV = ['talleres', 'labs'];
 const NAV = [
   { k:'home', label:'Inicio', href:'index.html' },
   { k:'talleres', label:'Talleres', href:'talleres.html' },
@@ -272,20 +281,22 @@ const NAV = [
   { k:'tienda', label:'Tienda', href:'tienda.html' },
   { k:'nosotros', label:'Nosotros', href:'nosotros.html' },
   { k:'contacto', label:'Contacto', href:'contacto.html' }
-];
+].filter(n => STORE_ENABLED || n.k !== 'tienda')
+ .filter(n => !HIDDEN_NAV.includes(n.k));
 
 function headerHTML(){
   const links = NAV.map(n => `<a href="${n.href}" data-hover class="${n.k===PAGE?'active':''}">${n.label}</a>`).join('');
-  return `<header>
-    <nav class="nav">
-      <a href="index.html" class="brand-logo" data-hover><img class="wordmark" src="images/logo2.png" alt="BlackQuack"></a>
-      <div class="nav-menu" id="navMenu">${links}</div>
-      <div class="nav-actions">
+  const storeActions = STORE_ENABLED ? `
         <button class="cart-btn" id="searchBtn" data-hover aria-label="Buscar"><i data-lucide="search"></i></button>
         <button class="cart-btn" id="cartBtn" data-hover aria-label="Carrito">
           <i data-lucide="shopping-bag"></i>
           <span class="cart-count" id="cartCount" style="display:none">0</span>
-        </button>
+        </button>` : '';
+  return `<header>
+    <nav class="nav">
+      <a href="index.html" class="brand-logo" data-hover><img class="wordmark" src="images/logo2.png" alt="BlackQuack"></a>
+      <div class="nav-menu" id="navMenu">${links}</div>
+      <div class="nav-actions">${storeActions}
         <button class="nav-toggle" id="navToggle" data-hover aria-label="Menú"><i data-lucide="menu"></i></button>
       </div>
     </nav>
@@ -325,15 +336,6 @@ function footerHTML(){
           <h4>Contacto</h4>
           <a href="contacto.html" data-hover>Página de contacto</a>
           <a href="mailto:conta@blackquack.cl" data-hover>conta@blackquack.cl</a>
-        </nav>
-        <nav class="foot-nav">
-          <h4>Legal</h4>
-          <a href="terminos.html" data-hover>Términos y condiciones</a>
-          <a href="privacidad.html" data-hover>Privacidad</a>
-          <a href="despacho.html" data-hover>Despacho</a>
-          <a href="cambios-devoluciones.html" data-hover>Cambios y devoluciones</a>
-          <a href="anulacion.html" data-hover>Botón de arrepentimiento</a>
-          <a href="cookies.html" data-hover>Cookies</a>
         </nav>
       </div>
       <div class="foot-bottom">
@@ -433,6 +435,12 @@ document.body.insertAdjacentHTML('beforeend',
   footerHTML() + cartHTML() + searchHTML() + workshopModalHTML() + `<div class="confetti-layer" id="confettiLayer"></div>`);
 lucide.createIcons();
 
+/* Tienda apagada (config STORE_ENABLED:false): oculta las secciones comerciales
+   estáticas de la landing sin parpadeo, antes de que carguen los productos. */
+if(!STORE_ENABLED){
+  document.querySelectorAll('.hero-collection, .store-banner').forEach(el=>{ el.hidden=true; });
+}
+
 /* ---------- PRELOADER ---------- */
 (function(){
   const pre=document.getElementById('preloader'); if(!pre) return;
@@ -488,6 +496,18 @@ function productCard(p){
 }
 function renderStore(filter='all'){
   const grid=document.getElementById('storeGrid'); if(!grid) return;
+  if(!STORE_ENABLED){
+    const tabs=document.getElementById('storeTabs'); if(tabs) tabs.hidden=true;
+    const note=document.querySelector('.store-note'); if(note) note.hidden=true;
+    grid.innerHTML=`<div class="store-soon">
+      <i data-lucide="store"></i>
+      <h2>Tienda en preparación</h2>
+      <p>Estamos afinando cada detalle para abrir muy pronto. Mientras tanto, escríbenos y con gusto te ayudamos.</p>
+      <a href="contacto.html" class="btn lg" data-hover><i data-lucide="mail"></i> Contáctanos</a>
+    </div>`;
+    lucide.createIcons();
+    return;
+  }
   const limit=parseInt(grid.dataset.limit||'0',10);
   let list=PRODUCTS.filter(p=>filter==='all'||p.cat===filter);
   if(limit>0) list=list.slice(0,limit);
@@ -497,11 +517,13 @@ function renderStore(filter='all'){
 /* Carrusel del big hero (home): primeros productos en una fila con scroll. */
 function renderHeroCarousel(){
   const track=document.getElementById('heroCarousel'); if(!track) return;
+  if(!STORE_ENABLED){ const sec=track.closest('.hero-collection'); if(sec) sec.hidden=true; return; }
   track.innerHTML=PRODUCTS.slice(0,8).map(productCard).join('');
   lucide.createIcons();
 }
 function buildTabs(){
   const tabs=document.getElementById('storeTabs'); if(!tabs) return;
+  if(!STORE_ENABLED){ tabs.hidden=true; return; }
   const cats=[...new Set(PRODUCTS.map(p=>p.cat))];
   tabs.innerHTML=`<button class="active" data-tab="all" data-hover>Todo</button>`+cats.map(c=>`<button data-tab="${c}" data-hover>${c}</button>`).join('');
   tabs.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{
@@ -550,6 +572,11 @@ function renderPDP(){
   // Línea de stock: muestra la CANTIDAD real (se actualiza en pdpRefresh).
   const stockLine = `<span id="pdpStockBadge" class="pdp-stock"></span>`;
   const related = PRODUCTS.filter(x=>x.id!==p.id).slice(0,3);
+  const relatedSection = STORE_ENABLED ? `
+    <section class="pdp-related wrap">
+      <div class="reel-label"><span style="color:var(--color-dark)">También te puede gustar</span><div class="ln" style="background:var(--color-dark);opacity:.2"></div></div>
+      <div class="store-grid">${related.map(productCard).join('')}</div>
+    </section>` : '';
 
   root.innerHTML=`
     <nav class="breadcrumb wrap">
@@ -595,11 +622,7 @@ function renderPDP(){
     <section class="pdp-band">
       ${band.map((src,i)=>`<figure><img src="${src}" alt="${p.name} — vista ${i+1}" loading="lazy"></figure>`).join('')}
     </section>
-
-    <section class="pdp-related wrap">
-      <div class="reel-label"><span style="color:var(--color-dark)">También te puede gustar</span><div class="ln" style="background:var(--color-dark);opacity:.2"></div></div>
-      <div class="store-grid">${related.map(productCard).join('')}</div>
-    </section>`;
+${relatedSection}`;
   lucide.createIcons();
   pdpInitVariants(p);
 }
@@ -778,11 +801,12 @@ const cartEl=document.getElementById('cart'), overlay=document.getElementById('o
 const saveCart=()=>localStorage.setItem('bq_cart_v5',JSON.stringify(cart));
 function openCart(){cartEl.classList.add('open');overlay.classList.add('show');}
 function closeCartFn(){cartEl.classList.remove('open');overlay.classList.remove('show');}
-document.getElementById('cartBtn').addEventListener('click',openCart);
-document.getElementById('closeCart').addEventListener('click',closeCartFn);
-overlay.addEventListener('click',closeCartFn);
+const cartBtnEl=document.getElementById('cartBtn'); if(cartBtnEl) cartBtnEl.addEventListener('click',openCart);
+const closeCartEl=document.getElementById('closeCart'); if(closeCartEl) closeCartEl.addEventListener('click',closeCartFn);
+if(overlay) overlay.addEventListener('click',closeCartFn);
 function cartQtyTotal(){return Object.values(cart).reduce((a,l)=>a+(l.qty||0),0);}
 function updateCount(pop){
+  if(!cartCount) return;
   const c=cartQtyTotal();
   cartCount.textContent=c; cartCount.style.display=c?'grid':'none';
   if(pop){cartCount.classList.remove('pop');void cartCount.offsetWidth;cartCount.classList.add('pop');}

@@ -14,38 +14,7 @@
 </head>
 <body data-page="home" data-preloader>
 
-<!-- ============ BIG HERO (apertura tipo Puma) ============
-     PARA CAMBIAR LA IMAGEN: sube tu foto ancha de alto impacto como
-     images/hero.jpg (ideal ~2000px de ancho). Mientras no exista, se muestra
-     un degradado de marca como placeholder. -->
-<section class="bighero" id="bighero">
-  <div class="bighero-media">
-    <img src="images/hero.jpg" alt="BlackQuack" class="bighero-img"
-         onerror="this.style.display='none';var h=document.getElementById('heroHint');if(h)h.style.display='flex'">
-    <div class="bighero-hint" id="heroHint"><i data-lucide="image"></i><span>Reemplaza <code>images/hero.jpg</code> con tu foto de alto impacto</span></div>
-    <div class="bighero-scrim"></div>
-  </div>
-  <div class="bighero-overlay">
-    <div class="wrap">
-      <span class="bighero-eyebrow">Make some Quack</span>
-      <h1 class="bighero-title">HERRAMIENTAS<br>PARA CREAR</h1>
-      <p class="bighero-sub">Animación análoga, cultura maker y diseño para despertar la imaginación. Sin pantallas, con las manos.</p>
-      <div class="bighero-ctas">
-        <a href="tienda.html" class="btn lg" data-hover>Descubrir la tienda <i data-lucide="arrow-right"></i></a>
-        <a href="#inicio" class="btn secondary lg" data-hover>Nuestra historia</a>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- huinca de palabras animadas, pegada justo bajo el hero -->
-<div class="marquee" aria-hidden="true">
-  <div class="marquee-track" id="marquee">
-    <span>Stop Motion</span><span class="dot">✦</span><span>Flipbooks</span><span class="dot">✦</span><span>Mesa de Luz</span><span class="dot">✦</span><span>Persistencia Retiniana</span><span class="dot">✦</span><span>Cut-Out</span><span class="dot">✦</span><span>Pixilación</span><span class="dot">✦</span><span>Make some Quack</span><span class="dot">✦</span>
-  </div>
-</div>
-
-<!-- carrusel de productos limpio -->
+<!-- carrusel de productos limpio (oculto si la tienda está apagada) -->
 <section class="hero-collection">
   <div class="wrap">
     <div class="hc-head">
@@ -63,17 +32,17 @@
 <section class="showcase" id="showcase">
   <div class="showcase-sticky">
     <div class="bento">
-      <div class="bento-cell" style="grid-area:a"><img src="https://dummyimage.com/500x500/1e1e1e/6f6f6f&text=Taller" alt="" loading="lazy"></div>
-      <div class="bento-cell" style="grid-area:b"><img src="https://dummyimage.com/700x400/242424/6f6f6f&text=Stop+Motion" alt="" loading="lazy"></div>
-      <div class="bento-cell" style="grid-area:c"><img src="https://dummyimage.com/500x500/1a1a1a/6f6f6f&text=Aula" alt="" loading="lazy"></div>
-      <div class="bento-cell" style="grid-area:d"><img src="https://dummyimage.com/400x700/222/6f6f6f&text=Frame" alt="" loading="lazy"></div>
+      <div class="bento-cell" style="grid-area:a"><img src="images/home/a-brand-005.jpg" alt="Estudiante grabando una escena stop-motion con el teléfono" loading="lazy"></div>
+      <div class="bento-cell" style="grid-area:b"><img src="images/home/b-taller-004.jpg" alt="Grupo de estudiantes mostrando sus dibujos de personajes" loading="lazy"></div>
+      <div class="bento-cell" style="grid-area:c"><img src="images/home/c-brand-007.jpg" alt="Equipo filmando animación con trípode en el taller" loading="lazy"></div>
+      <div class="bento-cell" style="grid-area:d"><img src="images/home/d-taller-003.jpg" alt="Niñas dibujando sobre mesas de luz" loading="lazy"></div>
       <div class="bento-cell bento-video" style="grid-area:V">
-        <video src="animakids/media/video-animakids.mp4" muted loop autoplay playsinline preload="metadata"></video>
+        <video src="animakids/media/video-animakids.mp4" poster="images/home/showcase-poster.jpg" muted loop autoplay playsinline preload="metadata"></video>
       </div>
-      <div class="bento-cell" style="grid-area:e"><img src="https://dummyimage.com/400x700/1c1c1c/6f6f6f&text=Maker" alt="" loading="lazy"></div>
-      <div class="bento-cell" style="grid-area:f"><img src="https://dummyimage.com/500x500/242424/6f6f6f&text=STEAM" alt="" loading="lazy"></div>
-      <div class="bento-cell" style="grid-area:g"><img src="https://dummyimage.com/700x400/1a1a1a/6f6f6f&text=Animar" alt="" loading="lazy"></div>
-      <div class="bento-cell" style="grid-area:h"><img src="https://dummyimage.com/500x500/1e1e1e/6f6f6f&text=Quack" alt="" loading="lazy"></div>
+      <div class="bento-cell" style="grid-area:e"><img src="images/home/e-brand-004.jpg" alt="Estudiante animando frame a frame en la mesa de luz" loading="lazy"></div>
+      <div class="bento-cell" style="grid-area:f"><img src="images/home/f-brand-010.jpg" alt="Manos dibujando sobre un tablero de luz LED" loading="lazy"></div>
+      <div class="bento-cell" style="grid-area:g"><img src="images/home/g-taller-002.jpg" alt="Estudiantes trabajando con set de croma verde" loading="lazy"></div>
+      <div class="bento-cell" style="grid-area:h"><img src="images/home/h-brand-001.jpg" alt="Personaje de plastilina modelado en el taller" loading="lazy"></div>
     </div>
     <!-- texto sobre el video (visible con el video al 100%; se desvanece al scrollear) -->
     <div class="showcase-overlay" id="scOverlay">
@@ -88,71 +57,26 @@
   </div>
 </section>
 
-<!-- ============ LABS — BlackQuack StopMotion (informativo / bento) ============ -->
-<section class="block" id="labs">
-  <div class="wrap">
-    <div class="sec-head">
-      <span class="eyebrow" style="background:var(--color-brand)"><i data-lucide="flask-conical" style="width:14px"></i> BQ Labs · En desarrollo</span>
-      <h2 style="color:#fff">BlackQuack StopMotion</h2>
-      <p style="color:#c9c9c9">La app que convierte cualquier tablet o teléfono en una estación de animación para el aula. Captura frame a frame, papel cebolla y trabajo por equipos — diseñada junto a docentes para los talleres Animakids.</p>
-    </div>
+<!-- huinca de palabras animadas (scroll infinito), tras el showcase -->
+<div class="marquee" aria-hidden="true">
+  <div class="marquee-track" id="marquee">
+    <span>Stop Motion</span><span class="dot">✦</span><span>Flipbooks</span><span class="dot">✦</span><span>Mesa de Luz</span><span class="dot">✦</span><span>Persistencia Retiniana</span><span class="dot">✦</span><span>Cut-Out</span><span class="dot">✦</span><span>Pixilación</span><span class="dot">✦</span><span>Make some Quack</span><span class="dot">✦</span>
+  </div>
+</div>
 
-    <div class="labs-bento">
-      <!-- HERO tile -->
-      <div class="lb lb-hero">
-        <div class="lb-hero-top">
-          <span class="lb-badge">BETA v0.9.5</span>
-          <div class="lb-appicon"><i data-lucide="clapperboard"></i></div>
-        </div>
-        <h3>Una estación de animación<br>en cada pupitre</h3>
-        <p>Sin instalaciones complejas: abre la app, conecta la cámara y anima. Pensada para 15 mentes creativas trabajando en paralelo.</p>
-        <a href="#contacto" class="lb-cta" data-hover><i data-lucide="rocket"></i> Sé beta tester</a>
-      </div>
-
-      <!-- Screenshot 1 -->
-      <div class="lb lb-shot lb-shot1">
-        <img src="https://dummyimage.com/800x600/6f6f6f/fff&text=Captura+frame+a+frame" alt="Interfaz de captura BlackQuack StopMotion" loading="lazy">
-        <span class="lb-tag">01 · Captura</span>
-      </div>
-
-      <!-- Feature tiles -->
-      <div class="lb lb-feat a">
-        <div class="lb-ic"><i data-lucide="layers"></i></div>
-        <h4>Papel cebolla</h4>
-        <p>Superpone el cuadro anterior para animar con precisión.</p>
-      </div>
-      <div class="lb lb-feat b">
-        <div class="lb-ic"><i data-lucide="smartphone"></i></div>
-        <h4>Cámara remota</h4>
-        <p>Usa el teléfono como cámara y controla todo desde la tablet.</p>
-      </div>
-      <div class="lb lb-feat c">
-        <div class="lb-ic"><i data-lucide="users"></i></div>
-        <h4>Modo aula</h4>
-        <p>Gestiona equipos, proyectos y avances de todo el curso.</p>
-      </div>
-      <div class="lb lb-feat d">
-        <div class="lb-ic"><i data-lucide="cloud"></i></div>
-        <h4>Nube segura</h4>
-        <p>Los trabajos se guardan e higienizan en la nube del taller.</p>
-      </div>
-
-      <!-- Screenshot 2 -->
-      <div class="lb lb-shot lb-shot2">
-        <img src="https://dummyimage.com/800x600/6f6f6f/fff&text=Modo+aula+%C2%B7+equipos" alt="Modo aula de la app BlackQuack StopMotion" loading="lazy">
-        <span class="lb-tag">02 · Equipos</span>
-      </div>
-
-      <!-- Roadmap tile -->
-      <div class="lb lb-road">
-        <span class="lb-road-k">Roadmap</span>
-        <ul>
-          <li><i data-lucide="check"></i> Captura &amp; onion skin</li>
-          <li><i data-lucide="check"></i> Control de FPS en tiempo real</li>
-          <li><i data-lucide="loader"></i> Exportación a video 4K</li>
-          <li><i data-lucide="loader"></i> Biblioteca de sonidos</li>
-        </ul>
-      </div>
+<!-- ============ APP EN DESARROLLO — BlackQuack StopMotion ============
+     Fusiona la imagen del antiguo hero banner con el contenido de la app. -->
+<section class="bighero app-banner" id="labs">
+  <div class="bighero-media">
+    <img src="images/home/banner-taller.jpg" alt="Animando stop-motion cuadro a cuadro con el teléfono" class="bighero-img">
+    <div class="bighero-scrim"></div>
+  </div>
+  <div class="bighero-overlay">
+    <div class="wrap">
+      <span class="cs-badge"><i data-lucide="flask-conical" style="width:14px"></i> BQ Labs · En desarrollo</span>
+      <h2 class="bighero-title">BlackQuack<br>StopMotion</h2>
+      <p class="bighero-sub">La app que convierte cualquier tablet o teléfono en una estación de animación para el aula. Captura frame a frame, papel cebolla y trabajo por equipos — diseñada junto a docentes.</p>
+      <span class="cs-soon"><i data-lucide="sparkles"></i> Próximamente</span>
     </div>
   </div>
 </section>

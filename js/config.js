@@ -5,6 +5,13 @@
    request: es público por diseño y va versionado a propósito. Los secretos
    reales (Flow secretKey, tokens de Management API) NUNCA van en esta capa. */
 window.BQ_CONFIG = {
+  /* Interruptor de tienda. En false se oculta TODO lo comercial del sitio:
+     link "Tienda" (nav + footer), botones de carrito y búsqueda, la página
+     tienda.html, los banners de tienda en la landing y los carruseles de
+     productos (home + "También te puede gustar" en la ficha). Para reactivar
+     la tienda: cambiar a true (o eliminar esta línea). */
+  STORE_ENABLED: false,
+
   CONTENTFUL_SPACE_ID: 'jsyka3qmf5vm',
   CONTENTFUL_ACCESS_TOKEN: 'eRQByYc_-IOt1625TvG7jWTv59-ZjGzfb9S_ZeGPLww',
   CONTENTFUL_ENVIRONMENT: 'master',
