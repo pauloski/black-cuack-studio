@@ -339,7 +339,7 @@ function footerHTML(){
         </nav>
       </div>
       <div class="foot-bottom">
-        <span>© 2026 BlackQuack — Ecosistema de animación independiente. Hecho con ruido en Chile 🇨🇱</span>
+        <span>© 2026 BlackQuack — Ecosistema de animación independiente. Hecho con ruido en Chile.</span>
         <span class="foot-tag">MAKE SOME QUACK.</span>
       </div>
     </div>
@@ -900,7 +900,7 @@ function renderCartPage(){
     </aside>`;
   lucide.createIcons();
 }
-function checkout(){ closeCartFn(); cart={}; saveCart(); renderCart(); updateCount(false); fireConfetti(); alert('¡Gracias por tu compra! 🦆 Tu pedido BlackQuack está en camino. (Checkout simulado)'); }
+function checkout(){ closeCartFn(); cart={}; saveCart(); renderCart(); updateCount(false); fireConfetti(); alert('¡Gracias por tu compra! Tu pedido BlackQuack está en camino. (Checkout simulado)'); }
 
 /* ---------- SEARCH (client-side, autocompletado) ----------
    El catálogo ya está en el navegador (PRODUCTS), así que buscar es un filtro en
@@ -988,7 +988,7 @@ function submitWorkshop(e){
   const f=document.getElementById('contactForm'); if(!f) return;
   f.addEventListener('submit',e=>{
     e.preventDefault();
-    f.innerHTML=`<div class="success"><div class="check"><i data-lucide="check"></i></div><h3>¡Mensaje enviado!</h3><p>Gracias por escribirnos. Te responderemos muy pronto con harto Quack. 🦆</p></div>`;
+    f.innerHTML=`<div class="success"><div class="check"><i data-lucide="check"></i></div><h3>¡Mensaje enviado!</h3><p>Gracias por escribirnos. Te responderemos muy pronto con harto Quack.</p></div>`;
     lucide.createIcons(); fireConfetti();
   });
 })();

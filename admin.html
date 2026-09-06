@@ -386,7 +386,7 @@
     if (!orders.length) { ordersResult.innerHTML = '<p class="muted" style="margin-top:14px">No hay pedidos pagados.</p>'; return; }
     var rows = orders.map(function (o) {
       var sh = o.shipping || {};
-      var destino = sh.metodo === 'retiro_punto' ? ('📦 Retiro: ' + (sh.punto || '')) : (sh.direccion || '');
+      var destino = sh.metodo === 'retiro_punto' ? ('Retiro: ' + (sh.punto || '')) : (sh.direccion || '');
       var items = (o.items || []).map(function (i) { return esc(i.title) + (i.variant ? ' (' + esc(i.variant) + ')' : '') + ' ×' + i.qty; }).join('<br>');
       var estado = esc(o.fulfillmentLabel || STATE_LABEL[o.fulfillment] || o.fulfillment || '—');
       var action = '';

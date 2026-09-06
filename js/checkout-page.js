@@ -147,7 +147,7 @@
       '<div class="co-card co-state">' +
         '<i data-lucide="package-open"></i>' +
         '<h2>Tu carrito está vacío</h2>' +
-        '<p>Agrega algo antes de pagar. ¡Hora de hacer Quack! 🦆</p>' +
+        '<p>Agrega algo antes de pagar. ¡Hora de hacer Quack!</p>' +
         '<a class="co-btn primary" href="tienda.html"><i data-lucide="shopping-bag"></i> Ir a la tienda</a>' +
       '</div>';
     icons();
