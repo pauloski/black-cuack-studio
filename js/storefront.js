@@ -1048,6 +1048,7 @@ loadProducts().then(()=>{
         su posición en la grilla. */
   let coverScale=1, tx0=0, ty0=0, vecs=[];
   function measure(){
+    if(isMobile()){ return; }
     bento.style.transform='none';
     cells.forEach(c=>{ c.style.transform='none'; });
     const cr=cell.getBoundingClientRect();
@@ -1064,10 +1065,20 @@ loadProducts().then(()=>{
     coverScale=Math.max(vw/cr.width, vh/cr.height)*1.05;
   }
   const easeOutCubic=t=>1-Math.pow(1-t,3);
+  // En mobile mostramos SOLO el video (sin animación de grilla): más fluido y estable.
+  const isMobile=()=>window.matchMedia('(max-width:620px)').matches;
 
   let ticking=false;
   function render(){
     ticking=false;
+    if(isMobile()){
+      // reset de transforms y texto/CTA siempre visible
+      bento.style.transform='none';
+      for(let i=0;i<cells.length;i++) cells[i].style.transform='none';
+      if(cue) cue.style.opacity='0';
+      if(overlay){ overlay.style.opacity='1'; overlay.style.pointerEvents=''; }
+      return;
+    }
     const rect=section.getBoundingClientRect();
     const total=section.offsetHeight-window.innerHeight;
     let p=total>0 ? (-rect.top)/total : 0;
