@@ -1,0 +1,18 @@
+# Cloudflare Pages — control de caché.
+# CSS/JS: revalidar en cada carga (etag → 304 si no cambió) para que los deploys
+# se reflejen de inmediato y no queden versiones viejas cacheadas en el navegador.
+/css/*
+  Cache-Control: public, max-age=0, must-revalidate
+
+/js/*
+  Cache-Control: public, max-age=0, must-revalidate
+
+# Imágenes y media: cacheables por más tiempo (cambian de nombre al reemplazarse).
+/images/*
+  Cache-Control: public, max-age=86400
+
+/media/*
+  Cache-Control: public, max-age=604800
+
+/animakids/*
+  Cache-Control: public, max-age=604800
